@@ -121,14 +121,21 @@ export interface AppointmentRow {
   provider: { app_user: { full_name: string } | null } | null;
 }
 
-/** The embeds every schedule/queue listing shares: patient, provider's name, department, visit type. */
+/**
+ * The embeds every schedule/queue listing shares.
+ *
+ * Every FK here is COMPOSITE ((fk_id, organization_id)), which PostgREST will not resolve from
+ * the column-name hint alone, and appointment reaches organization_member through TWO foreign
+ * keys (provider + created_by). So each embed names its constraint explicitly:
+ *   alias:table!constraint_name ( columns )
+ */
 const APPOINTMENT_SELECT = `
   id, provider_member_id, scheduled_start, scheduled_end, duration_minutes, status, origin,
   modality, room_label, block_title, chief_complaint, queue_ticket, checked_in_at, confirmed_at,
-  patient:patient_id ( id, mrn, first_name, last_name ),
-  visit_type:visit_type_id ( name ),
-  department:department_id ( id, name, daily_slot_capacity ),
-  provider:organization_member ( app_user ( full_name ) )
+  patient:patient!appointment_patient_fk ( id, mrn, first_name, last_name ),
+  visit_type:visit_type!appointment_visit_type_fk ( name ),
+  department:department!appointment_department_fk ( id, name, daily_slot_capacity ),
+  provider:organization_member!appointment_provider_fk ( app_user!organization_member_app_user_id_fkey ( full_name ) )
 `;
 
 export function appointmentTitle(a: AppointmentRow): string {
@@ -293,8 +300,8 @@ export async function getBookingProviders(): Promise<BookingProvider[]> {
     .from('staff_profile')
     .select(
       'member_id, specialty, default_room,' +
-        ' department:department_id ( name ),' +
-        ' member:organization_member ( app_user ( full_name ) )',
+        ' department:department!staff_profile_department_fk ( name ),' +
+        ' member:organization_member!staff_profile_member_fk ( app_user!organization_member_app_user_id_fkey ( full_name ) )',
     )
     .eq('accepts_bookings', true);
   const rows = unwrap<{
@@ -556,9 +563,9 @@ export async function getInvoices(): Promise<InvoiceRow[]> {
     .select(
       `id, number, status, currency, total_minor, patient_due_minor, due_at,
        prior_auth_required, denial_risk_flag, denial_risk_note,
-       patient:patient_id ( mrn, first_name, last_name ),
-       lines:invoice_line ( description, amount_minor ),
-       payments:payment ( amount_minor, received_at )`,
+       patient:patient!invoice_patient_fk ( mrn, first_name, last_name ),
+       lines:invoice_line!invoice_line_invoice_fk ( description, amount_minor ),
+       payments:payment!payment_invoice_fk ( amount_minor, received_at )`,
     )
     .neq('status', 'draft')
     .order('due_at', { ascending: true });
@@ -611,7 +618,10 @@ export interface ReleasedResultRow {
 export async function getReleasedResults(): Promise<ReleasedResultRow[]> {
   const { data, error } = await supabase
     .from('lab_result')
-    .select('id, value_numeric, value_text, unit, abnormal_flag, resulted_at, test:lab_test_id ( name )')
+    .select(
+      'id, value_numeric, value_text, unit, abnormal_flag, resulted_at,' +
+        ' test:lab_test!lab_result_test_fk ( name )',
+    )
     .not('released_to_patient_at', 'is', null)
     .order('resulted_at', { ascending: false });
   return unwrap<ReleasedResultRow & { test: { name: string } | null }>(data, error).map((r) => ({
@@ -735,7 +745,7 @@ export async function getPatientChart(patientId: string): Promise<PatientChart> 
         .from('care_team_member')
         .select(
           'id, role, assignment_note, ended_at,' +
-            ' member:organization_member ( roles, app_user ( full_name ) )',
+            ' member:organization_member!care_team_member_fk ( roles, app_user!organization_member_app_user_id_fkey ( full_name ) )',
         )
         .eq('patient_id', patientId)
         .is('ended_at', null),
