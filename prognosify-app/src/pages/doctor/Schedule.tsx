@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SideNav from '../../components/SideNav';
 import { Busy, Pressable, SegmentedControl } from '../../components/ui';
@@ -41,7 +41,7 @@ function toSlot(a: AppointmentRow): Slot {
     a.status !== 'booked' ? a.status.replace('_', ' ') : null,
   ]
     .filter(Boolean)
-    .join(' Â· ');
+    .join(' · ');
   return {
     key: a.id,
     time: timeLabel(a.scheduled_start),
@@ -127,13 +127,13 @@ export default function Schedule() {
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13.5 }}>
-            <Pressable onClick={() => setDate((d) => shiftDay(d, -step))} ariaLabel={isWeek ? 'Previous week' : 'Previous day'} style={{ color: '#5B6B7F', cursor: 'pointer' }}>â†</Pressable>
+            <Pressable onClick={() => setDate((d) => shiftDay(d, -step))} ariaLabel={isWeek ? 'Previous week' : 'Previous day'} style={{ color: '#5B6B7F', cursor: 'pointer' }}>←</Pressable>
             <div aria-live="polite" style={{ fontWeight: 600 }}>
               {isWeek
-                ? `${shortDayMonth(weekDays[0])} â€“ ${shortDayMonth(weekDays[6])}`
+                ? `${shortDayMonth(weekDays[0])} – ${shortDayMonth(weekDays[6])}`
                 : `${weekdayShortOf(date)}, ${shortDayMonth(date)}`}
             </div>
-            <Pressable onClick={() => setDate((d) => shiftDay(d, step))} ariaLabel={isWeek ? 'Next week' : 'Next day'} style={{ color: '#5B6B7F', cursor: 'pointer' }}>â†’</Pressable>
+            <Pressable onClick={() => setDate((d) => shiftDay(d, step))} ariaLabel={isWeek ? 'Next week' : 'Next day'} style={{ color: '#5B6B7F', cursor: 'pointer' }}>→</Pressable>
           </div>
         </div>
         <div style={{ flex: 1, display: 'flex', gap: 16, padding: '24px 28px', overflow: 'auto' }}>
@@ -208,7 +208,7 @@ export default function Schedule() {
                   ['Patient visits', String(patientVisits)],
                   ['Calendar blocks', String(blocks)],
                 ].map(([l, v]) => (
-                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ color: '#5B6B7F' }}>{l}</div><div style={{ fontWeight: 600 }}>{loading ? 'â€¦' : v}</div></div>
+                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ color: '#5B6B7F' }}>{l}</div><div style={{ fontWeight: 600 }}>{loading ? '…' : v}</div></div>
                 ))}
               </div>
             </div>

@@ -1,4 +1,4 @@
-﻿* { box-sizing: border-box; }
+* { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {
   margin: 0;
@@ -17,7 +17,7 @@ a:hover { color: #1E40AF; text-decoration: underline; }
 .hover-red:hover { border-color: #B42318 !important; }
 .hover-amber:hover { border-color: #B54708 !important; }
 
-/* Keyboard focus for the shared primitives in components/ui.tsx. Additive only â€” nothing above is modified.
+/* Keyboard focus for the shared primitives in components/ui.tsx. Additive only — nothing above is modified.
    Blue ring on the light surfaces; dark panels (#0F1C2E / #22344E) opt in with class="on-dark" for a light ring. */
 :focus-visible { outline: 2px solid #1D4ED8; outline-offset: 2px; }
 .on-dark:focus-visible, .on-dark :focus-visible { outline-color: #C9D8FA; }

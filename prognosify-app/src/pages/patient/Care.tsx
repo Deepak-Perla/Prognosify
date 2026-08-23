@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import PortalNav from '../../components/PortalNav';
 import { Busy, Pressable, pressableReset } from '../../components/ui';
@@ -86,7 +86,7 @@ export default function PatientCare() {
           )}
           {loading && (
             <div style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 14, padding: 24 }}>
-              <Busy label="Loading your care planâ€¦" fill={false} />
+              <Busy label="Loading your care plan…" fill={false} />
             </div>
           )}
           {!loading && !error && data && (
@@ -124,11 +124,11 @@ export default function PatientCare() {
                             opacity: busyTask === t.id ? 0.6 : 1,
                           }}
                         >
-                          {isDone ? 'âœ“' : null}
+                          {isDone ? '✓' : null}
                         </button>
                         <div style={{ flex: 1, fontSize: 13.5 }}>
                           <span style={{ fontWeight: 600 }}>{t.title}</span>
-                          {t.schedule_text ? ` Â· ${t.schedule_text}` : t.detail ? ` Â· ${t.detail}` : ''}
+                          {t.schedule_text ? ` · ${t.schedule_text}` : t.detail ? ` · ${t.detail}` : ''}
                         </div>
                       </div>
                     );
@@ -177,7 +177,7 @@ export default function PatientCare() {
                             <div style={{ color: '#5B6B7F' }}>{m.frequency_text}</div>
                           </div>
                           {m.refill_requested_at ? (
-                            <span role="status" style={{ fontSize: 11.5, color: '#116B3F', fontWeight: 600 }}>Refill requested âœ“ â€” your care team will confirm</span>
+                            <span role="status" style={{ fontSize: 11.5, color: '#116B3F', fontWeight: 600 }}>Refill requested ✓ — your care team will confirm</span>
                           ) : (
                             <Pressable
                               onClick={() => void refill(m.id)}
@@ -185,7 +185,7 @@ export default function PatientCare() {
                               title={`Asks your care team to authorise a refill of ${m.drug_name}.`}
                               style={{ fontSize: 11.5, color: '#1D4ED8', fontWeight: 600, width: 'fit-content' }}
                             >
-                              {refillBusy === m.id ? 'Requestingâ€¦' : 'Request refill â†’'}
+                              {refillBusy === m.id ? 'Requesting…' : 'Request refill →'}
                             </Pressable>
                           )}
                         </div>
@@ -195,7 +195,7 @@ export default function PatientCare() {
                   <div style={{ background: '#0F1C2E', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 6, color: '#fff' }}>
                     <h2 style={{ fontSize: 12.5, fontWeight: 600, color: '#8FB0FF', margin: 0 }}>WHY THIS PLAN</h2>
                     <div style={{ fontSize: 13, color: '#C7D2E4', lineHeight: 1.6 }}>
-                      Your care team reviews this plan at every visit â€” tick items off as you go and they see your progress before your next appointment.
+                      Your care team reviews this plan at every visit — tick items off as you go and they see your progress before your next appointment.
                     </div>
                   </div>
                 </div>

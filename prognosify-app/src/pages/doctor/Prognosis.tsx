@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import SideNav from '../../components/SideNav';
@@ -23,7 +23,7 @@ import { horizonLabel, pct, shortDate, timeLabel } from '../../lib/format';
  */
 const NO_PDF_SERVICE = 'Opens your browser\u2019s print dialog \u2014 save as PDF from there.';
 
-/** The accepted checklist lives only in this screen's state â€” review-state writes are a later milestone. */
+/** The accepted checklist lives only in this screen's state — review-state writes are a later milestone. */
 
 function factorColor(weight: number): string {
   if (weight < 0) return '#116B3F';
@@ -54,7 +54,7 @@ export default function Prognosis() {
       <div style={{ width: '100%', height: '100%', display: 'flex' }}>
         <SideNav role="doctor" active="patients" />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }} role="status">
-          <span style={{ fontSize: 13.5, color: '#5B6B7F' }}>Loading prognosisâ€¦</span>
+          <span style={{ fontSize: 13.5, color: '#5B6B7F' }}>Loading prognosis…</span>
         </div>
       </div>
     );
@@ -66,7 +66,7 @@ export default function Prognosis() {
         <SideNav role="doctor" active="patients" />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div role="alert" style={{ fontSize: 14, color: '#B42318' }}>{error ?? `No patient with MRN ${mrn} is visible to you.`}</div>
-          <Pressable onClick={() => navigate('/doctor/patients')} style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>â† All patients</Pressable>
+          <Pressable onClick={() => navigate('/doctor/patients')} style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>← All patients</Pressable>
         </div>
       </div>
     );
@@ -152,12 +152,12 @@ export default function Prognosis() {
   }
 
   const probabilityTile = (s: RiskScoreRow, accent: string): Tile => ({
-    label: `${RISK_TYPE_LABEL[s.risk_type]}${s.horizon ? ` Â· ${horizonLabel(s.horizon)}` : ''}`,
+    label: `${RISK_TYPE_LABEL[s.risk_type]}${s.horizon ? ` · ${horizonLabel(s.horizon)}` : ''}`,
     value: pct(s.probability),
     barColor: scoreTone(s.band),
     change:
       s.change_points != null
-        ? `${Number(s.change_points) >= 0 ? 'â†‘' : 'â†“'} ${Math.abs(Number(s.change_points))} pts${s.change_note ? ` ${s.change_note}` : ''}`
+        ? `${Number(s.change_points) >= 0 ? '↑' : '↓'} ${Math.abs(Number(s.change_points))} pts${s.change_note ? ` ${s.change_note}` : ''}`
         : `Band: ${s.band}`,
     changeColor: scoreTone(s.band),
     fill: pct(s.probability),
@@ -166,7 +166,7 @@ export default function Prognosis() {
 
   const emptyTile = (label: string): Tile => ({
     label,
-    value: 'â€”',
+    value: '—',
     barColor: '#C6CFDA',
     change: 'No score on file',
     changeColor: '#5B6B7F',
@@ -176,10 +176,10 @@ export default function Prognosis() {
 
   const rangeTile = (s: RiskScoreRow): Tile => ({
     label: RISK_TYPE_LABEL[s.risk_type],
-    value: `${Number(s.range_low)}â€“${Number(s.range_high)} ${s.unit ?? ''}`.trim(),
+    value: `${Number(s.range_low)}–${Number(s.range_high)} ${s.unit ?? ''}`.trim(),
     barColor: scoreTone(s.band),
     change: s.baseline_label
-      ? `vs. ${Number(s.baseline_low)}â€“${Number(s.baseline_high)} ${s.baseline_label}`
+      ? `vs. ${Number(s.baseline_low)}–${Number(s.baseline_high)} ${s.baseline_label}`
       : `Band: ${s.band}`,
     changeColor: '#5B6B7F',
     fill: '70%',
@@ -206,7 +206,7 @@ export default function Prognosis() {
             </Pressable>
             <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>AI prognosis report</h1>
             <span style={{ background: '#EDF2FE', color: '#1D4ED8', border: '1px solid #C9D8FA', borderRadius: 12, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
-              {chart.run ? `Model ${chart.run.model_version ?? '?'} Â· Generated ${shortDate(chart.run.created_at)} ${timeLabel(chart.run.created_at)}` : 'No model runs yet'}
+              {chart.run ? `Model ${chart.run.model_version ?? '?'} · Generated ${shortDate(chart.run.created_at)} ${timeLabel(chart.run.created_at)}` : 'No model runs yet'}
             </span>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
@@ -223,7 +223,7 @@ export default function Prognosis() {
               title={
                 uncommittedCount > 0
                   ? `Writes ${uncommittedCount} accepted finding${uncommittedCount > 1 ? 's' : ''} into the patient's chart with your name attached.`
-                  : 'Nothing waiting â€” accepted findings are already on the chart.'
+                  : 'Nothing waiting — accepted findings are already on the chart.'
               }
               style={{
                 background: '#1D4ED8', color: '#fff', borderRadius: 8, padding: '9px 16px',
@@ -233,10 +233,10 @@ export default function Prognosis() {
               }}
             >
               {busyFinding === 'commit'
-                ? 'Addingâ€¦'
+                ? 'Adding…'
                 : uncommittedCount > 0
                   ? `Add to chart (${uncommittedCount})`
-                  : 'On the chart âœ“'}
+                  : 'On the chart ✓'}
             </Pressable>
           </div>
         </div>
@@ -267,7 +267,7 @@ export default function Prognosis() {
                         <div style={{ width: `${factorBar(f)}%`, height: 8, borderRadius: 4, background: factorColor(Number(f.weight)) }} />
                       </div>
                       <div style={{ width: 44, fontSize: 12.5, color: '#5B6B7F', textAlign: 'right' }}>
-                        {Number(f.weight) >= 0 ? '+' : 'âˆ’'}
+                        {Number(f.weight) >= 0 ? '+' : '−'}
                         {Math.abs(Number(f.weight)).toFixed(2)}
                       </div>
                     </div>
@@ -312,8 +312,8 @@ export default function Prognosis() {
                           {f.detail && <div style={{ fontSize: 12.5, color: '#5B6B7F' }}>{f.detail}</div>}
                           <div style={{ fontSize: 11.5, color: '#8A97A8' }}>
                             {f.review_state === 'pending'
-                              ? 'Tick to accept â€” recorded with your name'
-                              : `${f.review_state}${f.chart_committed_at ? ' Â· added to chart' : ''}`}
+                              ? 'Tick to accept — recorded with your name'
+                              : `${f.review_state}${f.chart_committed_at ? ' · added to chart' : ''}`}
                           </div>
                         </div>
                       </div>
@@ -335,12 +335,12 @@ export default function Prognosis() {
                   opacity: busyFinding === 'all' || chart.findings.every((f) => f.review_state !== 'pending') ? 0.55 : 1,
                 }}
               >
-                {busyFinding === 'all' ? 'Recording acceptanceâ€¦' : `Accept all (${acceptedCount}/${chart.findings.length} accepted)`}
+                {busyFinding === 'all' ? 'Recording acceptance…' : `Accept all (${acceptedCount}/${chart.findings.length} accepted)`}
               </Pressable>
             </div>
             {leadScore && chart.trajectory.length > 1 && (
               <div style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{RISK_TYPE_LABEL[leadScore.risk_type]} Â· history</h2>
+                <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{RISK_TYPE_LABEL[leadScore.risk_type]} · history</h2>
                 <div
                   role="img"
                   aria-label={`${RISK_TYPE_LABEL[leadScore.risk_type]} over the last ${chart.trajectory.length} recorded runs: ${chart.trajectory.map((s) => pct(s.probability)).join(', ')}.`}
@@ -355,7 +355,7 @@ export default function Prognosis() {
                           ? '#E38B80'
                           : '#C9D8FA';
                     return (
-                      <div key={s.id} title={`${shortDate(s.as_of)} ${timeLabel(s.as_of)} â€” ${v}`} style={{ flex: 1, background: tone, borderRadius: '4px 4px 0 0', height: `${Math.max(4, Math.round((s.probability ?? 0) * 100))}%`, minHeight: 6 }} />
+                      <div key={s.id} title={`${shortDate(s.as_of)} ${timeLabel(s.as_of)} — ${v}`} style={{ flex: 1, background: tone, borderRadius: '4px 4px 0 0', height: `${Math.max(4, Math.round((s.probability ?? 0) * 100))}%`, minHeight: 6 }} />
                     );
                   })}
                 </div>
@@ -367,7 +367,7 @@ export default function Prognosis() {
             )}
             <Pressable onClick={() => navigate('/doctor/ai-assistant')} className="on-dark" style={{ background: '#0F1C2E', borderRadius: 12, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8, color: '#fff', cursor: 'pointer' }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#8FB0FF' }}>ASK THE AI</div>
-              <div style={{ fontSize: 13.5, color: '#C7D2E4', lineHeight: 1.5 }}>"Why did this risk move?" â€” ask follow-up questions about this prediction.</div>
+              <div style={{ fontSize: 13.5, color: '#C7D2E4', lineHeight: 1.5 }}>"Why did this risk move?" — ask follow-up questions about this prediction.</div>
             </Pressable>
           </div>
         </div>

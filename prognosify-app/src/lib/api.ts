@@ -1,4 +1,4 @@
-﻿import type { PostgrestError } from '@supabase/supabase-js';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { dayBounds, todayKey, weekBounds } from './format';
 
@@ -143,7 +143,7 @@ export function appointmentTitle(a: AppointmentRow): string {
   if (a.block_title) return a.block_title;
   const who = a.patient ? `${a.patient.first_name} ${a.patient.last_name}` : 'Patient';
   const what = a.visit_type?.name ?? (a.origin === 'walk_in' ? 'Walk-in' : 'Visit');
-  return `${who} â€” ${what}`;
+  return `${who} — ${what}`;
 }
 
 export function providerName(a: AppointmentRow): string {
@@ -366,7 +366,7 @@ export interface NewAppointment {
 /** Front-desk booking. The double-booking exclusion constraint rejects collisions server-side. */
 export async function createAppointment(input: NewAppointment): Promise<string> {
   const ctx = await myStaffContext();
-  if (!ctx) throw new Error('No active staff seat â€” sign in again.');
+  if (!ctx) throw new Error('No active staff seat — sign in again.');
   const { data, error } = await supabase
     .from('appointment')
     .insert({
@@ -398,7 +398,7 @@ export interface StaffContext {
 
 /**
  * The signed-in user's seat: org + member id, resolved from app_user.active_organization_id and
- * the live membership â€” the same resolution the server-side helpers do from the JWT.
+ * the live membership — the same resolution the server-side helpers do from the JWT.
  */
 export async function myStaffContext(): Promise<StaffContext | null> {
   const { data: userData } = await supabase.auth.getUser();
@@ -406,7 +406,13 @@ export async function myStaffContext(): Promise<StaffContext | null> {
   if (!authUserId) return null;
   const { data, error } = await supabase
     .from('app_user')
-    .select('active_organization_id, members:organization_member ( id, status )')
+    .select(
+      'active_organization_id,' +
+        // organization_member is reachable from app_user through THREE foreign keys
+        // (app_user_id, the (app_user_id, auth_user_id) pair, and created_by) — name the one
+        // that means "this person's seats".
+        ' members:organization_member!organization_member_app_user_id_fkey ( id, status )',
+    )
     .eq('auth_user_id', authUserId)
     .limit(1);
   if (error || !data?.length) return null;
@@ -490,7 +496,7 @@ export function toSexEnum(label: string): 'male' | 'female' | 'other' | 'undiscl
   return SEX_TO_ENUM[label] ?? 'undisclosed';
 }
 
-/** MRNs are allocated by the app ("104-882" style), unique per tenant â€” retry on collision. */
+/** MRNs are allocated by the app ("104-882" style), unique per tenant — retry on collision. */
 export async function registerPatient(input: {
   firstName: string;
   lastName: string;
@@ -500,7 +506,7 @@ export async function registerPatient(input: {
   email: string | null;
 }): Promise<string> {
   const ctx = await myStaffContext();
-  if (!ctx) throw new Error('No active staff seat â€” sign in again.');
+  if (!ctx) throw new Error('No active staff seat — sign in again.');
 
   const { data: existing } = await supabase
     .from('patient')
@@ -529,7 +535,7 @@ export async function registerPatient(input: {
     if (!error) return (data as { mrn: string }).mrn;
     if (!error.message.includes('duplicate key')) throw new Error(error.message);
   }
-  throw new Error('Could not allocate an MRN â€” please retry.');
+  throw new Error('Could not allocate an MRN — please retry.');
 }
 
 /* -------------------------------------------------------------------------- billing ----- */

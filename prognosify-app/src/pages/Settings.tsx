@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import SideNav from '../components/SideNav';
 import { Busy, TextField, Toggle } from '../components/ui';
 import { useAsync } from '../lib/useAsync';
@@ -9,7 +9,7 @@ import { getMyFullName, getMySettings, saveMySetting } from '../lib/api';
  * Staff settings.
  *
  * Profile fields read the signed-in user's real directory row (app_user +
- * organization_member via staff_profile) and stay read-only here â€” identity is
+ * organization_member via staff_profile) and stay read-only here — identity is
  * administered, not self-edited. The AI preferences are the user's own
  * org_setting rows (member_id = their seat), written straight through.
  */
@@ -73,7 +73,7 @@ export default function Settings() {
   };
 
   const initials = (profile?.fullName ?? '')
-    .split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || 'â€”';
+    .split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || '—';
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex' }}>
@@ -100,7 +100,7 @@ export default function Settings() {
             ))}
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 720 }}>
-            {loading && <Busy label="Loading your settingsâ€¦" fill={false} />}
+            {loading && <Busy label="Loading your settings…" fill={false} />}
             {error && (
               <div role="alert" style={{ background: '#FEF5F4', border: '1px solid #F1D3D0', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#B42318' }}>
                 Could not load settings: {error}
@@ -117,7 +117,7 @@ export default function Settings() {
                     <button
                       type="button"
                       aria-disabled="true"
-                      title="Photo upload needs object storage â€” not available in this release."
+                      title="Photo upload needs object storage — not available in this release."
                       style={{ fontSize: 13, color: '#8A97A8', fontWeight: 500 }}
                     >
                       Change photo
@@ -158,7 +158,7 @@ export default function Settings() {
                           <span aria-hidden="true" className="ui-spinner small" />
                         )}
                         {savedKey === pref.key && (
-                          <span role="status" style={{ fontSize: 12, color: '#116B3F', fontWeight: 600 }}>Saved âœ“</span>
+                          <span role="status" style={{ fontSize: 12, color: '#116B3F', fontWeight: 600 }}>Saved ✓</span>
                         )}
                       </div>
                       <Toggle

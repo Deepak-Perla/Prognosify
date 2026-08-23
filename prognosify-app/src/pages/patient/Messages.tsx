@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import PortalNav from '../../components/PortalNav';
 import { Busy, Pressable, TextField, pressableReset } from '../../components/ui';
@@ -13,7 +13,7 @@ import {
 } from '../../lib/api';
 import { timeLabel, dayKey, todayKey, shiftDay, shortDate } from '../../lib/format';
 
-/** "9:02 AM" for today, "Yesterday", else the short date â€” the list's right column. */
+/** "9:02 AM" for today, "Yesterday", else the short date — the list's right column. */
 function stamp(iso: string): string {
   const d = dayKey(iso);
   if (d === todayKey()) return timeLabel(iso);
@@ -43,7 +43,7 @@ export default function PatientMessages() {
     contacts.find((c) => c.member_id === activeContactId) ?? contacts[0] ?? null;
 
   // The thread refetches when it opens, when a message is sent, and every 20 seconds
-  // afterwards â€” replies arrive without a page refresh.
+  // afterwards — replies arrive without a page refresh.
   const threadState = useAsync(async () => {
     if (!patientId) return [] as MessageRow[];
     return getThread(patientId);
@@ -87,7 +87,7 @@ export default function PatientMessages() {
         <div style={{ width: 960, display: 'flex', gap: 16, padding: '28px 0', height: '100%', boxSizing: 'border-box' }}>
           <div style={{ width: 300, flexShrink: 0, background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <h1 style={{ padding: '16px 18px', borderBottom: '1px solid #EEF2F6', fontSize: 15, fontWeight: 700, margin: 0 }}>Messages</h1>
-            {loading && <Busy label="Loading conversationsâ€¦" fill={false} />}
+            {loading && <Busy label="Loading conversations…" fill={false} />}
             {error && (
               <div role="alert" style={{ padding: '12px 18px', fontSize: 12.5, color: '#B42318' }}>
                 Could not load messages: {error}
@@ -123,7 +123,7 @@ export default function PatientMessages() {
                     <div style={{ fontSize: 13.5, fontWeight: active ? 700 : 600 }}>{c.full_name}</div>
                     <div style={{ fontSize: 11.5, color: '#5B6B7F' }}>
                       {(c.role.charAt(0).toUpperCase() + c.role.slice(1)).replace('_', ' ')}
-                      {c.specialty ? ` Â· ${c.specialty}` : ''}
+                      {c.specialty ? ` · ${c.specialty}` : ''}
                     </div>
                   </div>
                 </Pressable>
@@ -143,7 +143,7 @@ export default function PatientMessages() {
                   </div>
                 </div>
                 <div ref={threadRef} role="log" aria-label={`Conversation with ${contact.full_name}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, padding: 20, overflow: 'auto' }}>
-                  {threadState.loading && <Busy label="Loading messagesâ€¦" fill={false} />}
+                  {threadState.loading && <Busy label="Loading messages…" fill={false} />}
                   {messages.map((m) => (
                     <div key={m.id} title={stamp(m.created_at)} style={m.sent_by_patient ? meBubble : themBubble}>
                       {m.body}
@@ -151,7 +151,7 @@ export default function PatientMessages() {
                   ))}
                   {!threadState.loading && messages.length === 0 && (
                     <div style={{ color: '#8A97A8', fontSize: 13, textAlign: 'center', marginTop: 24 }}>
-                      No messages yet â€” say hello.
+                      No messages yet — say hello.
                     </div>
                   )}
                 </div>
@@ -159,7 +159,7 @@ export default function PatientMessages() {
                   <TextField
                     value={draft}
                     onChange={setDraft}
-                    placeholder={`Write to ${contact.full_name}â€¦`}
+                    placeholder={`Write to ${contact.full_name}…`}
                     ariaLabel={`Write a message to ${contact.full_name}`}
                     onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void send(); } }}
                     style={{ flex: 1, border: '1px solid #DDE3EB', borderRadius: 10, padding: '11px 14px', fontSize: 13.5, color: draft ? '#0F1C2E' : '#8A97A8' }}
@@ -171,7 +171,7 @@ export default function PatientMessages() {
                     title="Sends your message to your care team."
                     style={{ ...pressableReset, background: '#1D4ED8', color: '#fff', borderRadius: 10, padding: '11px 18px', fontSize: 13.5, fontWeight: 600, opacity: sending || !draft.trim() ? 0.55 : 1, cursor: sending || !draft.trim() ? 'default' : 'pointer' }}
                   >
-                    {sending ? 'Sendingâ€¦' : 'Send'}
+                    {sending ? 'Sending…' : 'Send'}
                   </button>
                 </div>
                 {sendError && (

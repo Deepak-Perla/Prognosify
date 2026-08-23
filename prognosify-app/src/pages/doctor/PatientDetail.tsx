@@ -1,4 +1,4 @@
-﻿import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import SideNav from '../../components/SideNav';
@@ -28,7 +28,7 @@ const headerButton: CSSProperties = { border: '1px solid #DDE3EB', background: '
 
 const resultText = (r: Pick<LabQueueRow, 'value_numeric' | 'value_text' | 'unit'>): string => {
   if (r.value_numeric != null) return `${r.value_numeric} ${r.unit ?? ''}`.trim();
-  return r.value_text ?? 'â€”';
+  return r.value_text ?? '—';
 };
 
 /** Trend vs the same test's previous occurrence in the fetched window. */
@@ -40,10 +40,10 @@ function trendFor(labs: LabQueueRow[], index: number): { text: string; color: st
   if (current.value_numeric == null || !previous || previous.value_numeric == null) return null;
   const delta = current.value_numeric - previous.value_numeric;
   const eps = Math.abs(current.value_numeric) * 0.05;
-  if (Math.abs(delta) <= eps) return { text: 'â†’ stable', color: '#5B6B7F' };
+  if (Math.abs(delta) <= eps) return { text: '→ stable', color: '#5B6B7F' };
   return delta > 0
-    ? { text: 'â†‘ rising', color: current.abnormal_flag.includes('critical') || current.abnormal_flag === 'high' ? '#B42318' : '#B54708' }
-    : { text: 'â†“ falling', color: '#116B3F' };
+    ? { text: '↑ rising', color: current.abnormal_flag.includes('critical') || current.abnormal_flag === 'high' ? '#B42318' : '#B54708' }
+    : { text: '↓ falling', color: '#116B3F' };
 }
 
 export default function PatientDetail() {
@@ -122,7 +122,7 @@ export default function PatientDetail() {
       <div style={{ width: '100%', height: '100%', display: 'flex' }}>
         <SideNav role="doctor" active="patients" />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }} role="status">
-          <Busy label="Loading chartâ€¦" />
+          <Busy label="Loading chart…" />
         </div>
       </div>
     );
@@ -134,7 +134,7 @@ export default function PatientDetail() {
         <SideNav role="doctor" active="patients" />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div role="alert" style={{ fontSize: 14, color: '#B42318' }}>{error ?? `No patient with MRN ${mrn} is visible to you.`}</div>
-          <Pressable onClick={() => navigate('/doctor/patients')} style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>â† All patients</Pressable>
+          <Pressable onClick={() => navigate('/doctor/patients')} style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>← All patients</Pressable>
         </div>
       </div>
     );
@@ -143,7 +143,7 @@ export default function PatientDetail() {
   const { summary, chart } = data;
   const initials = summary.full_name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('');
   const leadScore = chart.riskScores.find((s) => s.value_kind === 'probability') ?? chart.riskScores[0] ?? null;
-  const allergyLine = chart.allergies.length > 0 ? ` Â· Allergies: ${chart.allergies.map((a) => a.substance).join(', ')}` : '';
+  const allergyLine = chart.allergies.length > 0 ? ` · Allergies: ${chart.allergies.map((a) => a.substance).join(', ')}` : '';
 
   // Vitals cards follow the mock's colour language: red when clearly abnormal, amber borderline.
   const hr = chart.vitals?.heart_rate_bpm ?? null;
@@ -155,10 +155,10 @@ export default function PatientDetail() {
       : null;
 
   const vitals: [string, string, string | undefined][] = [
-    ['Heart rate', hr != null ? String(hr) : 'â€”', hr != null && hr > 100 ? '#B42318' : undefined],
-    ['BP', bp ?? 'â€”', undefined],
-    ['Temp', temp != null ? `${temp.toFixed(1)}Â°C` : 'â€”', temp != null && temp >= 38 ? '#B54708' : undefined],
-    ['SpOâ‚‚', spo2 != null ? `${spo2}%` : 'â€”', spo2 != null && spo2 < 94 ? '#B54708' : undefined],
+    ['Heart rate', hr != null ? String(hr) : '—', hr != null && hr > 100 ? '#B42318' : undefined],
+    ['BP', bp ?? '—', undefined],
+    ['Temp', temp != null ? `${temp.toFixed(1)}°C` : '—', temp != null && temp >= 38 ? '#B54708' : undefined],
+    ['SpO₂', spo2 != null ? `${spo2}%` : '—', spo2 != null && spo2 < 94 ? '#B54708' : undefined],
   ];
 
   return (
@@ -176,7 +176,7 @@ export default function PatientDetail() {
                 <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{summary.full_name}</h1>
                 {leadScore && (
                   <span style={{ background: leadScore.band === 'high' || leadScore.band === 'critical' ? '#FEF5F4' : leadScore.band === 'medium' ? '#FEFAF0' : '#F0F7F2', color: leadScore.band === 'high' || leadScore.band === 'critical' ? '#B42318' : leadScore.band === 'medium' ? '#B54708' : '#116B3F', border: '1px solid #E5E9F0', borderRadius: 12, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
-                    {(leadScore.band === 'high' || leadScore.band === 'critical' ? 'High' : leadScore.band)} risk Â· {leadScore.probability != null ? pct(leadScore.probability) : leadScore.band}
+                    {(leadScore.band === 'high' || leadScore.band === 'critical' ? 'High' : leadScore.band)} risk · {leadScore.probability != null ? pct(leadScore.probability) : leadScore.band}
                   </span>
                 )}
               </div>
@@ -190,7 +190,7 @@ export default function PatientDetail() {
                   allergyLine,
                 ]
                   .filter(Boolean)
-                  .join(' Â· ')}
+                  .join(' · ')}
               </div>
             </div>
           </div>
@@ -240,7 +240,7 @@ export default function PatientDetail() {
                       disabled={panelsState.loading}
                       style={{ flex: 1, minWidth: 200, border: '1px solid #DDE3EB', borderRadius: 8, padding: '9px 12px', fontSize: 13.5, background: '#fff', color: '#0F1C2E' }}
                     >
-                      <option value="">{panelsState.loading ? 'Loading panelsâ€¦' : 'Choose a panelâ€¦'}</option>
+                      <option value="">{panelsState.loading ? 'Loading panels…' : 'Choose a panel…'}</option>
                       {(panelsState.data ?? []).map((p) => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
@@ -277,14 +277,14 @@ export default function PatientDetail() {
                         opacity: !panelId || orderBusy ? 0.55 : 1,
                       }}
                     >
-                      {orderBusy ? 'Orderingâ€¦' : 'Place order'}
+                      {orderBusy ? 'Ordering…' : 'Place order'}
                     </Pressable>
                   </div>
                 </div>
               )}
               {orderDone && (
                 <div role="status" style={{ fontSize: 12.5, color: '#116B3F' }}>
-                  Order placed â€” it is now in the labs queue.
+                  Order placed — it is now in the labs queue.
                 </div>
               )}
               {chart.recentLabs.length === 0 ? (
@@ -303,8 +303,8 @@ export default function PatientDetail() {
                         <div style={{ color: flagged ? (l.abnormal_flag.includes('critical') ? '#B42318' : '#B54708') : '#0F1C2E', fontWeight: 600 }}>
                           {resultText(l)}
                         </div>
-                        <div style={{ color: '#5B6B7F' }}>{l.reference_range || 'â€”'}</div>
-                        <div style={{ color: trend?.color ?? '#5B6B7F' }}>{trend?.text ?? 'â€”'}</div>
+                        <div style={{ color: '#5B6B7F' }}>{l.reference_range || '—'}</div>
+                        <div style={{ color: trend?.color ?? '#5B6B7F' }}>{trend?.text ?? '—'}</div>
                       </div>
                     );
                   })}
@@ -322,7 +322,7 @@ export default function PatientDetail() {
                     ariaLabel="Progress note"
                     value={noteBody}
                     onChange={setNoteBody}
-                    placeholder="Progress note â€” saved signed and attributed to youâ€¦"
+                    placeholder="Progress note — saved signed and attributed to you…"
                     rows={3}
                     style={{ border: '1px solid #DDE3EB', borderRadius: 8, background: '#fff', padding: '10px 12px', fontSize: 13.5, color: '#0F1C2E', minHeight: 72 }}
                   />
@@ -343,7 +343,7 @@ export default function PatientDetail() {
                         opacity: !noteBody.trim() || noteBusy ? 0.55 : 1,
                       }}
                     >
-                      {noteBusy ? 'Savingâ€¦' : 'Sign & save'}
+                      {noteBusy ? 'Saving…' : 'Sign & save'}
                     </Pressable>
                   </div>
                 </div>
@@ -384,7 +384,7 @@ export default function PatientDetail() {
                           <div style={{ color: '#C7D2E4' }}>
                             {RISK_TYPE_LABEL[s.risk_type]}{s.horizon ? ` (${horizonLabel(s.horizon)})` : ''}
                           </div>
-                          <div style={{ fontWeight: 700, color: tone }}>{s.band === 'critical' || s.band === 'high' ? 'High' : s.band === 'medium' ? 'Medium' : 'Low'} Â· {value}</div>
+                          <div style={{ fontWeight: 700, color: tone }}>{s.band === 'critical' || s.band === 'high' ? 'High' : s.band === 'medium' ? 'Medium' : 'Low'} · {value}</div>
                         </div>
                         <div aria-hidden="true" style={{ height: 6, borderRadius: 3, background: '#22344E' }}>
                           <div style={{ width: `${Math.round((s.probability ?? 0) * 100)}%`, height: 6, borderRadius: 3, background: tone }} />
@@ -409,7 +409,7 @@ export default function PatientDetail() {
                   {chart.medications.slice(0, 5).map((m) => (
                     <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <div>{m.drug_name} {m.dose_text}</div>
-                      <div style={{ color: '#5B6B7F' }}>{m.frequency_text}{m.status !== 'active' ? ` Â· ${m.status}` : ''}</div>
+                      <div style={{ color: '#5B6B7F' }}>{m.frequency_text}{m.status !== 'active' ? ` · ${m.status}` : ''}</div>
                     </div>
                   ))}
                 </div>
@@ -426,7 +426,7 @@ export default function PatientDetail() {
                       <div>{c.member?.app_user?.full_name ?? 'Unknown member'}</div>
                       <div style={{ color: '#5B6B7F' }}>
                         {(c.role.charAt(0).toUpperCase() + c.role.slice(1)).replace('_', ' ')}
-                        {c.assignment_note ? ` Â· ${c.assignment_note}` : ''}
+                        {c.assignment_note ? ` · ${c.assignment_note}` : ''}
                       </div>
                     </div>
                   ))}
