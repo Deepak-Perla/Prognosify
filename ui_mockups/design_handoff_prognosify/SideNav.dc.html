@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="width:232px;background:#ffffff;border-right:1px solid #DDE3EB;display:flex;flex-direction:column;padding:20px 14px;gap:4px;height:100%;box-sizing:border-box;font-family:'Geist',sans-serif;">
+<div style="display:flex;align-items:center;gap:9px;padding:0 10px 18px;">
+<div style="width:28px;height:28px;border-radius:7px;background:#1D4ED8;color:#ffffff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">P</div>
+<div style="font-size:15px;font-weight:600;color:#0F1C2E;">Prognosify</div>
+</div>
+<sc-for list="{{ navItems }}" as="item" hint-placeholder-count="5">
+<div style="{{ item.style }}" onClick="{{ item.onClick }}">{{ item.label }}</div>
+</sc-for>
+<div style="{{ settingsStyle }}" onClick="{{ goSettings }}">Settings</div>
+<div style="{{ logoutStyle }}" onClick="{{ goLogin }}">Log out</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;232px&quot;,&quot;height&quot;:&quot;900px&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;doctor&quot;,&quot;reception&quot;],&quot;default&quot;:&quot;doctor&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;docDash&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Record&lt;string,()=&gt;void&gt;&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const role = this.props.role || 'doctor';
+    const go = this.props.go || {};
+    const sets = {
+      doctor: [['docDash','Dashboard'],['patients','Patients'],['schedule','Schedule'],['labs','Labs'],['aiChat','AI assistant']],
+      reception: [['recDash','Front desk'],['checkin','Check-in queue'],['booking','Book appointment'],['register','Register patient'],['billing','Billing']]
+    };
+    const base = { padding: '9px 10px', borderRadius: 7, fontSize: 13.5, cursor: 'pointer' };
+    const mk = (k) => ({ ...base, ...(this.props.active === k ? { fontWeight: 600, background: '#EDF2FE', color: '#1D4ED8' } : { color: '#5B6B7F' }) });
+    return {
+      navItems: (sets[role] || sets.doctor).map(([k, label]) => ({ label, onClick: go[k], style: mk(k) })),
+      settingsStyle: { ...mk('settings'), marginTop: 'auto' },
+      logoutStyle: { ...base, color: '#5B6B7F' },
+      goSettings: go.settings, goLogin: go.login
+    };
+  }
+}
+</script>
+</body>
+</html>

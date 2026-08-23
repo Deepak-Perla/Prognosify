@@ -1,0 +1,13 @@
+# dependencies / builds
+node_modules/
+dist/
+
+# environment secrets (Supabase keys, DB URLs) — never commit
+.env
+.env.*
+!.env.example
+
+# editor/os noise
+.claude/settings.local.json
+Thumbs.db
+.DS_Store
