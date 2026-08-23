@@ -11,3 +11,4 @@ dist/
 .claude/settings.local.json
 Thumbs.db
 .DS_Store
+supabase/.temp/
