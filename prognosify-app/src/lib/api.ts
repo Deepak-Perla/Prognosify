@@ -416,7 +416,7 @@ export async function myStaffContext(): Promise<StaffContext | null> {
     .eq('auth_user_id', authUserId)
     .limit(1);
   if (error || !data?.length) return null;
-  const row = data[0] as {
+  const row = data[0] as unknown as {
     active_organization_id: string | null;
     members: { id: string; status: string }[] | null;
   } | null;
