@@ -1,10 +1,13 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import SideNav from '../../components/SideNav';
-import { Checkbox, Pressable, pressableReset } from '../../components/ui';
+import { Checkbox, Pressable } from '../../components/ui';
 import { useAsync } from '../../lib/useAsync';
+import { useAuth } from '../../lib/auth';
 import {
+  acceptFinding,
+  commitFindingToChart,
   getPatientChart,
   getPatientSummaryByMrn,
   RISK_TYPE_LABEL,
@@ -14,22 +17,13 @@ import {
 import { horizonLabel, pct, shortDate, timeLabel } from '../../lib/format';
 
 /**
- * "Export PDF" and "Add to chart" both need a server-side writer; rather than triggering a fake
- * download or pretending the report was filed, they stay focusable and marked aria-disabled with
- * an explanatory tooltip.
+ * Review decisions are real writes: accepting stamps review_state + reviewer (the schema's
+ * CHECK forbids chart commitment until then), "Add to chart" commits the accepted findings,
+ * and Export hands the report to the browser's print pipeline.
  */
-const NO_BACKEND = 'Not available yet — report export and chart commitment are not built in this release.';
+const NO_PDF_SERVICE = 'Opens your browser\u2019s print dialog \u2014 save as PDF from there.';
 
-function NotImplemented({ style, children }: { style: CSSProperties; children: ReactNode }) {
-  return (
-    <button type="button" aria-disabled="true" title={NO_BACKEND} style={{ ...pressableReset, ...style }}>
-      {children}
-    </button>
-  );
-}
-
-/** The accepted checklist lives only in this screen's state — review-state writes are a later milestone. */
-const LOCAL_ONLY = 'Marks every recommendation as accepted in this view only. Review decisions are not written back yet.';
+/** The accepted checklist lives only in this screen's state â€” review-state writes are a later milestone. */
 
 function factorColor(weight: number): string {
   if (weight < 0) return '#116B3F';
@@ -44,9 +38,11 @@ function factorBar(f: RiskFactorRow): number {
 export default function Prognosis() {
   const navigate = useNavigate();
   const mrn = useParams<{ mrn: string }>().mrn ?? '';
-  const [accepted, setAccepted] = useState<Record<string, boolean>>({});
+  const { membership } = useAuth();
+  const [busyFinding, setBusyFinding] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data, error, loading } = useAsync(async () => {
+  const { data, error, loading, reload } = useAsync(async () => {
     const summary = await getPatientSummaryByMrn(mrn);
     if (!summary) return null;
     const chart = await getPatientChart(summary.patient_id);
@@ -58,7 +54,7 @@ export default function Prognosis() {
       <div style={{ width: '100%', height: '100%', display: 'flex' }}>
         <SideNav role="doctor" active="patients" />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }} role="status">
-          <span style={{ fontSize: 13.5, color: '#5B6B7F' }}>Loading prognosis…</span>
+          <span style={{ fontSize: 13.5, color: '#5B6B7F' }}>Loading prognosisâ€¦</span>
         </div>
       </div>
     );
@@ -70,7 +66,7 @@ export default function Prognosis() {
         <SideNav role="doctor" active="patients" />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div role="alert" style={{ fontSize: 14, color: '#B42318' }}>{error ?? `No patient with MRN ${mrn} is visible to you.`}</div>
-          <Pressable onClick={() => navigate('/doctor/patients')} style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>← All patients</Pressable>
+          <Pressable onClick={() => navigate('/doctor/patients')} style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>â† All patients</Pressable>
         </div>
       </div>
     );
@@ -83,9 +79,64 @@ export default function Prognosis() {
   // Factor bars belong to whichever score they hang off; show all for the current run.
   const factors = chart.factors;
 
-  const setOne = (id: string, value: boolean) =>
-    setAccepted((prev) => ({ ...prev, [id]: value }));
-  const allAccepted = (chart.findings.length ?? 0) > 0 && chart.findings.every((f) => accepted[f.id]);
+  // Real review writes. Accepting stamps reviewer + time; the schema's CHECK forbids chart
+  // commitment until a finding is accepted, which is why the commit button waits for it.
+  const review = async (findingId: string) => {
+    if (!membership) return;
+    setBusyFinding(findingId);
+    setActionError(null);
+    try {
+      await acceptFinding(findingId, membership.organizationId, membership.memberId);
+      reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not record the acceptance.');
+    } finally {
+      setBusyFinding(null);
+    }
+  };
+
+  const commitAll = async () => {
+    if (!membership) return;
+    const pendingCommit = chart.findings.filter(
+      (f) => f.review_state === 'accepted' && !f.chart_committed_at,
+    );
+    if (pendingCommit.length === 0) return;
+    setBusyFinding('commit');
+    setActionError(null);
+    try {
+      for (const f of pendingCommit) {
+        await commitFindingToChart(f.id, membership.organizationId, membership.memberId);
+      }
+      reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not add to the chart.');
+    } finally {
+      setBusyFinding(null);
+    }
+  };
+
+  // Accept every pending recommendation in one go.
+  const acceptAll = async () => {
+    if (!membership) return;
+    const pendingIds = chart.findings.filter((f) => f.review_state === 'pending').map((f) => f.id);
+    if (pendingIds.length === 0) return;
+    setBusyFinding('all');
+    setActionError(null);
+    try {
+      for (const id of pendingIds) {
+        await acceptFinding(id, membership.organizationId, membership.memberId);
+      }
+      reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not record the acceptance.');
+    } finally {
+      setBusyFinding(null);
+    }
+  };
+  const acceptedCount = chart.findings.filter((f) => f.review_state !== 'pending').length;
+  const uncommittedCount = chart.findings.filter(
+    (f) => f.review_state === 'accepted' && !f.chart_committed_at,
+  ).length;
 
   const scoreTone = (band: RiskScoreRow['band']): string =>
     band === 'high' || band === 'critical' ? '#B42318' : band === 'medium' ? '#B54708' : '#116B3F';
@@ -101,12 +152,12 @@ export default function Prognosis() {
   }
 
   const probabilityTile = (s: RiskScoreRow, accent: string): Tile => ({
-    label: `${RISK_TYPE_LABEL[s.risk_type]}${s.horizon ? ` · ${horizonLabel(s.horizon)}` : ''}`,
+    label: `${RISK_TYPE_LABEL[s.risk_type]}${s.horizon ? ` Â· ${horizonLabel(s.horizon)}` : ''}`,
     value: pct(s.probability),
     barColor: scoreTone(s.band),
     change:
       s.change_points != null
-        ? `${Number(s.change_points) >= 0 ? '↑' : '↓'} ${Math.abs(Number(s.change_points))} pts${s.change_note ? ` ${s.change_note}` : ''}`
+        ? `${Number(s.change_points) >= 0 ? 'â†‘' : 'â†“'} ${Math.abs(Number(s.change_points))} pts${s.change_note ? ` ${s.change_note}` : ''}`
         : `Band: ${s.band}`,
     changeColor: scoreTone(s.band),
     fill: pct(s.probability),
@@ -115,7 +166,7 @@ export default function Prognosis() {
 
   const emptyTile = (label: string): Tile => ({
     label,
-    value: '—',
+    value: 'â€”',
     barColor: '#C6CFDA',
     change: 'No score on file',
     changeColor: '#5B6B7F',
@@ -125,10 +176,10 @@ export default function Prognosis() {
 
   const rangeTile = (s: RiskScoreRow): Tile => ({
     label: RISK_TYPE_LABEL[s.risk_type],
-    value: `${Number(s.range_low)}–${Number(s.range_high)} ${s.unit ?? ''}`.trim(),
+    value: `${Number(s.range_low)}â€“${Number(s.range_high)} ${s.unit ?? ''}`.trim(),
     barColor: scoreTone(s.band),
     change: s.baseline_label
-      ? `vs. ${Number(s.baseline_low)}–${Number(s.baseline_high)} ${s.baseline_label}`
+      ? `vs. ${Number(s.baseline_low)}â€“${Number(s.baseline_high)} ${s.baseline_label}`
       : `Band: ${s.band}`,
     changeColor: '#5B6B7F',
     fill: '70%',
@@ -155,12 +206,38 @@ export default function Prognosis() {
             </Pressable>
             <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>AI prognosis report</h1>
             <span style={{ background: '#EDF2FE', color: '#1D4ED8', border: '1px solid #C9D8FA', borderRadius: 12, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
-              {chart.run ? `Model ${chart.run.model_version ?? '?'} · Generated ${shortDate(chart.run.created_at)} ${timeLabel(chart.run.created_at)}` : 'No model runs yet'}
+              {chart.run ? `Model ${chart.run.model_version ?? '?'} Â· Generated ${shortDate(chart.run.created_at)} ${timeLabel(chart.run.created_at)}` : 'No model runs yet'}
             </span>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <NotImplemented style={{ border: '1px solid #DDE3EB', background: '#ffffff', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Export PDF</NotImplemented>
-            <NotImplemented style={{ background: '#1D4ED8', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add to chart</NotImplemented>
+            <Pressable
+              onClick={() => window.print()}
+              title={NO_PDF_SERVICE}
+              style={{ border: '1px solid #DDE3EB', background: '#ffffff', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+            >
+              Export PDF
+            </Pressable>
+            <Pressable
+              onClick={() => void commitAll()}
+              disabled={uncommittedCount === 0 || busyFinding === 'commit'}
+              title={
+                uncommittedCount > 0
+                  ? `Writes ${uncommittedCount} accepted finding${uncommittedCount > 1 ? 's' : ''} into the patient's chart with your name attached.`
+                  : 'Nothing waiting â€” accepted findings are already on the chart.'
+              }
+              style={{
+                background: '#1D4ED8', color: '#fff', borderRadius: 8, padding: '9px 16px',
+                fontSize: 13, fontWeight: 600,
+                cursor: uncommittedCount === 0 || busyFinding === 'commit' ? 'default' : 'pointer',
+                opacity: uncommittedCount === 0 || busyFinding === 'commit' ? 0.55 : 1,
+              }}
+            >
+              {busyFinding === 'commit'
+                ? 'Addingâ€¦'
+                : uncommittedCount > 0
+                  ? `Add to chart (${uncommittedCount})`
+                  : 'On the chart âœ“'}
+            </Pressable>
           </div>
         </div>
         <div style={{ flex: 1, display: 'flex', gap: 16, padding: '24px 28px', overflow: 'auto' }}>
@@ -190,7 +267,7 @@ export default function Prognosis() {
                         <div style={{ width: `${factorBar(f)}%`, height: 8, borderRadius: 4, background: factorColor(Number(f.weight)) }} />
                       </div>
                       <div style={{ width: 44, fontSize: 12.5, color: '#5B6B7F', textAlign: 'right' }}>
-                        {Number(f.weight) >= 0 ? '+' : '−'}
+                        {Number(f.weight) >= 0 ? '+' : 'âˆ’'}
                         {Math.abs(Number(f.weight)).toFixed(2)}
                       </div>
                     </div>
@@ -215,32 +292,55 @@ export default function Prognosis() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {chart.findings.map((f) => (
-                    <div key={f.id} style={{ display: 'flex', gap: 10, border: '1px solid #DDE3EB', borderRadius: 10, padding: '12px 14px', alignItems: 'flex-start' }}>
-                      <Checkbox checked={Boolean(accepted[f.id])} onChange={(value) => setOne(f.id, value)} ariaLabel={`Accept: ${f.title}`} style={{ marginTop: 1 }} />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{f.title}</div>
-                        {f.detail && <div style={{ fontSize: 12.5, color: '#5B6B7F' }}>{f.detail}</div>}
-                        {f.confidence != null && (
-                          <div style={{ fontSize: 11.5, color: '#8A97A8' }}>{pct(f.confidence)} conf.</div>
-                        )}
+                  {chart.findings.map((f) => {
+                    const decided = f.review_state !== 'pending';
+                    return (
+                      <div key={f.id} style={{ display: 'flex', gap: 10, border: '1px solid #DDE3EB', borderRadius: 10, padding: '12px 14px', alignItems: 'flex-start' }}>
+                        <Checkbox
+                          checked={decided}
+                          onChange={(value) => { if (value && !decided) void review(f.id); }}
+                          ariaLabel={`Accept: ${f.title}`}
+                          style={{ marginTop: 1 }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 600 }}>
+                            {f.title}
+                            {busyFinding === f.id && (
+                              <span aria-hidden="true" className="ui-spinner small" style={{ display: 'inline-block', marginLeft: 8, verticalAlign: 'middle' }} />
+                            )}
+                          </div>
+                          {f.detail && <div style={{ fontSize: 12.5, color: '#5B6B7F' }}>{f.detail}</div>}
+                          <div style={{ fontSize: 11.5, color: '#8A97A8' }}>
+                            {f.review_state === 'pending'
+                              ? 'Tick to accept â€” recorded with your name'
+                              : `${f.review_state}${f.chart_committed_at ? ' Â· added to chart' : ''}`}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
+              {actionError && (
+                <div role="alert" style={{ fontSize: 12.5, color: '#B42318' }}>{actionError}</div>
+              )}
               <Pressable
-                onClick={() => setAccepted(Object.fromEntries(chart.findings.map((f) => [f.id, true])))}
-                title={LOCAL_ONLY}
-                aria-disabled={allAccepted || undefined}
-                style={{ background: '#1D4ED8', color: '#fff', borderRadius: 8, padding: '10px 0', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => void acceptAll()}
+                disabled={busyFinding === 'all' || chart.findings.every((f) => f.review_state !== 'pending')}
+                title="Records your acceptance of every pending recommendation, with your name and the time."
+                style={{
+                  background: '#1D4ED8', color: '#fff', borderRadius: 8, padding: '10px 0',
+                  textAlign: 'center', fontSize: 13, fontWeight: 600,
+                  cursor: busyFinding === 'all' ? 'default' : 'pointer',
+                  opacity: busyFinding === 'all' || chart.findings.every((f) => f.review_state !== 'pending') ? 0.55 : 1,
+                }}
               >
-                Accept all &amp; add to plan
+                {busyFinding === 'all' ? 'Recording acceptanceâ€¦' : `Accept all (${acceptedCount}/${chart.findings.length} accepted)`}
               </Pressable>
             </div>
             {leadScore && chart.trajectory.length > 1 && (
               <div style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{RISK_TYPE_LABEL[leadScore.risk_type]} · history</h2>
+                <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{RISK_TYPE_LABEL[leadScore.risk_type]} Â· history</h2>
                 <div
                   role="img"
                   aria-label={`${RISK_TYPE_LABEL[leadScore.risk_type]} over the last ${chart.trajectory.length} recorded runs: ${chart.trajectory.map((s) => pct(s.probability)).join(', ')}.`}
@@ -255,7 +355,7 @@ export default function Prognosis() {
                           ? '#E38B80'
                           : '#C9D8FA';
                     return (
-                      <div key={s.id} title={`${shortDate(s.as_of)} ${timeLabel(s.as_of)} — ${v}`} style={{ flex: 1, background: tone, borderRadius: '4px 4px 0 0', height: `${Math.max(4, Math.round((s.probability ?? 0) * 100))}%`, minHeight: 6 }} />
+                      <div key={s.id} title={`${shortDate(s.as_of)} ${timeLabel(s.as_of)} â€” ${v}`} style={{ flex: 1, background: tone, borderRadius: '4px 4px 0 0', height: `${Math.max(4, Math.round((s.probability ?? 0) * 100))}%`, minHeight: 6 }} />
                     );
                   })}
                 </div>
@@ -267,7 +367,7 @@ export default function Prognosis() {
             )}
             <Pressable onClick={() => navigate('/doctor/ai-assistant')} className="on-dark" style={{ background: '#0F1C2E', borderRadius: 12, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8, color: '#fff', cursor: 'pointer' }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#8FB0FF' }}>ASK THE AI</div>
-              <div style={{ fontSize: 13.5, color: '#C7D2E4', lineHeight: 1.5 }}>"Why did this risk move?" — ask follow-up questions about this prediction.</div>
+              <div style={{ fontSize: 13.5, color: '#C7D2E4', lineHeight: 1.5 }}>"Why did this risk move?" â€” ask follow-up questions about this prediction.</div>
             </Pressable>
           </div>
         </div>

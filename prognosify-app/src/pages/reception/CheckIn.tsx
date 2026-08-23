@@ -1,7 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SideNav from '../../components/SideNav';
-import { Chip, Pressable, pressableReset } from '../../components/ui';
+import { Busy, Chip, Pressable, pressableReset } from '../../components/ui';
 import { useAsync } from '../../lib/useAsync';
 import {
   getCheckinQueue,
@@ -38,7 +38,7 @@ export default function CheckIn() {
       ? rows.filter((r) => r.status === 'waiting' || (r.status === 'booked' && r.provider_name !== null))
       : rows.filter((r) => r.status === tab);
 
-  // The DB guard only allows booked→waiting→in_room, so each action targets one legal step.
+  // The DB guard only allows bookedâ†’waitingâ†’in_room, so each action targets one legal step.
   const advance = async (row: CheckinQueueRow, next: 'waiting' | 'in_room') => {
     setBusyId(row.appointment_id);
     setActionError(null);
@@ -66,12 +66,13 @@ export default function CheckIn() {
                 onClick={() => setTab(t.key)}
                 ariaLabel={`Show ${t.label} (${countFor(t.key)})`}
               >
-                {t.label} ({loading && t.key === tab ? '…' : countFor(t.key)})
+                {t.label} ({loading && t.key === tab ? 'â€¦' : countFor(t.key)})
               </Chip>
             ))}
           </div>
         </div>
         <div style={{ flex: 1, padding: '24px 28px', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {loading && <Busy label="Loading today's queue…" fill={false} />}
           <div style={{ display: 'grid', gridTemplateColumns: '60px 1.8fr 1.4fr 1fr 1fr 1.2fr', padding: '0 20px', fontSize: 12, fontWeight: 600, color: '#5B6B7F', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
             <div>Queue</div><div>Patient</div><div>Provider</div><div>Appt</div><div>Waiting</div><div></div>
           </div>
@@ -99,14 +100,14 @@ export default function CheckIn() {
                   <div style={{ fontWeight: 700, color: warn ? '#B54708' : '#1D4ED8' }}>{String(q.queue_ticket ?? 0).padStart(2, '0')}</div>
                   <div style={{ fontWeight: 600 }}>
                     {q.patient_name}
-                    {warn && <span style={{ color: '#B54708', fontSize: 12 }}> · waiting {q.waiting_minutes} min</span>}
+                    {warn && <span style={{ color: '#B54708', fontSize: 12 }}> Â· waiting {q.waiting_minutes} min</span>}
                   </div>
                   <div style={{ color: '#5B6B7F' }}>
-                    {[q.provider_name, q.department_name].filter(Boolean).join(' · ') || 'Triage pending'}
+                    {[q.provider_name, q.department_name].filter(Boolean).join(' Â· ') || 'Triage pending'}
                   </div>
                   <div style={{ color: '#5B6B7F' }}>{timeLabel(q.scheduled_start)}</div>
                   <div style={{ fontWeight: 600, color: warn ? '#B54708' : undefined }}>
-                    {q.waiting_minutes != null ? `${q.waiting_minutes} min` : '—'}
+                    {q.waiting_minutes != null ? `${q.waiting_minutes} min` : 'â€”'}
                   </div>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     {isWaitingRow ? (
@@ -114,7 +115,7 @@ export default function CheckIn() {
                         onClick={() => void advance(q, 'in_room')}
                         disabled={busyId === q.appointment_id}
                         ariaLabel={`Send ${q.patient_name} to the room`}
-                        title="Marks this appointment in_room — the clinic record updates immediately."
+                        title="Marks this appointment in_room â€” the clinic record updates immediately."
                         style={busyId === q.appointment_id ? { ...primaryAction, opacity: 0.6 } : primaryAction}
                       >
                         Send to room
@@ -124,7 +125,7 @@ export default function CheckIn() {
                         onClick={() => void advance(q, 'waiting')}
                         disabled={busyId === q.appointment_id}
                         ariaLabel={`Check in ${q.patient_name}`}
-                        title="Checks the patient in — they move to Waiting with a live wait time."
+                        title="Checks the patient in â€” they move to Waiting with a live wait time."
                         style={busyId === q.appointment_id ? { ...primaryAction, opacity: 0.6 } : primaryAction}
                       >
                         Check in
@@ -151,7 +152,7 @@ export default function CheckIn() {
           {!error && triageNeeded.length > 0 && (
             <div style={{ background: '#F8F9FB', border: '1px dashed #C6CFDA', borderRadius: 12, padding: '14px 20px', fontSize: 13, color: '#5B6B7F', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>{triageNeeded.length} walk-in{triageNeeded.length > 1 ? 's' : ''} awaiting triage ({triageNeeded.map((t) => t.patient_name).join(', ')})</div>
-              <Pressable onClick={() => navigate('/reception/register')} style={{ color: '#1D4ED8', fontWeight: 600, cursor: 'pointer' }}>Register walk-in →</Pressable>
+              <Pressable onClick={() => navigate('/reception/register')} style={{ color: '#1D4ED8', fontWeight: 600, cursor: 'pointer' }}>Register walk-in â†’</Pressable>
             </div>
           )}
         </div>

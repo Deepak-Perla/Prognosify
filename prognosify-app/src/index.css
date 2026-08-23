@@ -1,4 +1,4 @@
-* { box-sizing: border-box; }
+﻿* { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {
   margin: 0;
@@ -17,9 +17,24 @@ a:hover { color: #1E40AF; text-decoration: underline; }
 .hover-red:hover { border-color: #B42318 !important; }
 .hover-amber:hover { border-color: #B54708 !important; }
 
-/* Keyboard focus for the shared primitives in components/ui.tsx. Additive only — nothing above is modified.
+/* Keyboard focus for the shared primitives in components/ui.tsx. Additive only â€” nothing above is modified.
    Blue ring on the light surfaces; dark panels (#0F1C2E / #22344E) opt in with class="on-dark" for a light ring. */
 :focus-visible { outline: 2px solid #1D4ED8; outline-offset: 2px; }
 .on-dark:focus-visible, .on-dark :focus-visible { outline-color: #C9D8FA; }
 /* TextField/TextArea placeholders take the field's own colour (the spec's grey prompt text), not the UA grey. */
 .ui-field::placeholder { color: var(--ui-placeholder, inherit); opacity: 1; }
+
+/* Shared data-loading spinner (components/ui.tsx <Busy/>). A visible, honest "the app is
+   working" cue so an empty content area is never mistaken for missing data. */
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+.ui-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #DDE3EB;
+  border-top-color: #1D4ED8;
+  animation: ui-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+.ui-spinner.on-dark { border-color: #22344E; border-top-color: #8FB0FF; }
+.ui-spinner.small { width: 14px; height: 14px; border-width: 2px; }

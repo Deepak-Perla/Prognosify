@@ -1,9 +1,9 @@
-import { useId, useMemo, useState } from 'react';
+﻿import { useId, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SideNav from '../../components/SideNav';
 import { hiChip, medChip, lowChip, chip } from '../../data/mock';
 import type { CSSProperties } from 'react';
-import { Chip, TextField, pressableReset } from '../../components/ui';
+import { Busy, Chip, TextField, pressableReset } from '../../components/ui';
 import { useAsync } from '../../lib/useAsync';
 import {
   getLatestRiskScores,
@@ -36,13 +36,13 @@ interface Row {
 }
 
 function toRow(summary: PatientSummaryRow, risk: RiskScoreRow | undefined): Row {
-  const label = risk ? `${risk.band === 'critical' ? 'High' : bandLabel(risk.band)} · ${riskPercent(risk)}` : null;
+  const label = risk ? `${risk.band === 'critical' ? 'High' : bandLabel(risk.band)} Â· ${riskPercent(risk)}` : null;
   return {
     patientId: summary.patient_id,
-    name: `${summary.full_name} · ${ageSex(summary.age_years, summary.sex).trim()}`,
+    name: `${summary.full_name} Â· ${ageSex(summary.age_years, summary.sex).trim()}`,
     mrn: summary.mrn,
-    status: summary.is_inpatient ? `Inpatient · ${summary.current_room ?? 'ward'}` : 'Outpatient',
-    condition: summary.primary_condition ?? '—',
+    status: summary.is_inpatient ? `Inpatient Â· ${summary.current_room ?? 'ward'}` : 'Outpatient',
+    condition: summary.primary_condition ?? 'â€”',
     riskLabel: label,
     riskStyle: risk ? bandChip[risk.band] : null,
     lastVisitAt: summary.last_visit_at,
@@ -122,7 +122,7 @@ export default function Patients() {
   }, []);
 
   const rows = useMemo(() => data ?? [], [data]);
-  // The chip labels carry live counts, so selection is tracked on the stable prefix ("All", …).
+  // The chip labels carry live counts, so selection is tracked on the stable prefix ("All", â€¦).
   const filters = useMemo(() => filtersFor(rows), [rows]);
   const activePrefix = active.split(' (')[0];
   const activeFilter =
@@ -151,17 +151,17 @@ export default function Patients() {
             <TextField
               value={query}
               onChange={(value) => { setQuery(value); setPage(0); }}
-              placeholder="Search by name or MRN…"
+              placeholder="Search by name or MRNâ€¦"
               ariaLabel="Search patients by name or MRN"
               style={{ border: '1px solid #DDE3EB', borderRadius: 8, background: '#F4F6F9', padding: '8px 14px', fontSize: 13, color: '#5B6B7F', width: 240 }}
             />
-            {/* Registration happens at the front desk (reception → Register); the doctor portal
+            {/* Registration happens at the front desk (reception â†’ Register); the doctor portal
                 does not create patients, so this stays marked unavailable rather than faking it. */}
             <button
               type="button"
               aria-disabled="true"
               aria-describedby={addPatientNoteId}
-              title="Patients are registered at the front desk — see reception → Register."
+              title="Patients are registered at the front desk â€” see reception â†’ Register."
               onClick={() => { /* intentionally does nothing: see aria-disabled */ }}
               style={{ ...pressableReset, background: '#1D4ED8', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
@@ -188,7 +188,7 @@ export default function Patients() {
               <div role="columnheader">Patient</div><div role="columnheader">MRN</div><div role="columnheader">Status</div><div role="columnheader">Primary condition</div><div role="columnheader">AI risk</div><div role="columnheader">Last visit</div>
             </div>
             {loading && (
-              <div role="status" style={{ padding: '18px 20px', fontSize: 13.5, color: '#5B6B7F' }}>Loading patients…</div>
+              <div role="status" style={{ padding: '18px 20px', fontSize: 13.5, color: '#5B6B7F' }}><Busy label="Loading patients" fill={false} /></div>
             )}
             {error && (
               <div role="alert" style={{ padding: '18px 20px', fontSize: 13.5, color: '#B42318' }}>
@@ -210,7 +210,7 @@ export default function Patients() {
                 <div role="cell" style={{ color: '#5B6B7F' }}>{row.mrn}</div>
                 <div role="cell">{row.status}</div>
                 <div role="cell" style={{ color: '#5B6B7F' }}>{row.condition}</div>
-                <div role="cell">{row.riskLabel && row.riskStyle ? <span style={row.riskStyle}>{row.riskLabel}</span> : <span style={{ color: '#8A97A8' }}>—</span>}</div>
+                <div role="cell">{row.riskLabel && row.riskStyle ? <span style={row.riskStyle}>{row.riskLabel}</span> : <span style={{ color: '#8A97A8' }}>â€”</span>}</div>
                 <div role="cell" style={{ color: '#5B6B7F' }}>{visitStamp(row.lastVisitAt)}</div>
               </button>
             ))}
@@ -233,7 +233,7 @@ export default function Patients() {
                 onClick={() => { if (hasPrev) setPage(currentPage - 1); }}
                 style={{ ...pressableReset, cursor: 'pointer' }}
               >
-                ← Prev
+                â† Prev
               </button>
               <button
                 type="button"
@@ -242,7 +242,7 @@ export default function Patients() {
                 onClick={() => { if (hasNext) setPage(currentPage + 1); }}
                 style={{ ...pressableReset, color: '#1D4ED8', fontWeight: 600, cursor: 'pointer' }}
               >
-                Next →
+                Next â†’
               </button>
             </div>
           </div>

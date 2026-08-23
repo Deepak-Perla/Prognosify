@@ -1,7 +1,7 @@
-import type { CSSProperties, ReactNode } from 'react';
+﻿import type { CSSProperties, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SideNav from '../../components/SideNav';
-import { Pressable, pressableReset } from '../../components/ui';
+import { Busy, Pressable, pressableReset } from '../../components/ui';
 import { useAsync } from '../../lib/useAsync';
 import {
   balanceMinor,
@@ -90,7 +90,7 @@ export default function ReceptionDashboard() {
       <SideNav role="reception" active="recDash" />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div style={{ height: 64, background: '#ffffff', borderBottom: '1px solid #DDE3EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', flexShrink: 0 }}>
-          <h1 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>Front desk · {dayLabel(new Date())}</h1>
+          <h1 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>Front desk Â· {dayLabel(new Date())}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Pressable onClick={() => navigate('/reception/register')} style={{ border: '1px solid #DDE3EB', background: '#ffffff', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Register patient</Pressable>
             <Pressable onClick={() => navigate('/reception/booking')} style={{ background: '#1D4ED8', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Book appointment</Pressable>
@@ -102,27 +102,28 @@ export default function ReceptionDashboard() {
               Could not load the front-desk dashboard: {error}
             </div>
           )}
+          {loading && <Busy label="Loading the front desk…" fill={false} />}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
             <Pressable className="hover-border-accent" ariaLabel={`Waiting now: ${data?.waiting.length ?? 0} patients. Open the check-in queue`} onClick={() => navigate('/reception/check-in')} style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, padding: 18, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
               <div style={{ fontSize: 12.5, color: '#5B6B7F' }}>Waiting now</div>
-              <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? '…' : data?.waiting.length ?? '—'}</div>
+              <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? 'â€¦' : data?.waiting.length ?? 'â€”'}</div>
               <div style={{ fontSize: 12, color: '#B54708' }}>{data?.avgWait != null ? `Avg wait ${data.avgWait} min` : 'No one queued'}</div>
             </Pressable>
             <div style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, padding: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ fontSize: 12.5, color: '#5B6B7F' }}>Appointments today</div>
-              <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? '…' : data?.queue.length ?? '—'}</div>
+              <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? 'â€¦' : data?.queue.length ?? 'â€”'}</div>
               <div style={{ fontSize: 12, color: '#5B6B7F' }}>{data?.walkIns ?? 0} walk-ins</div>
             </div>
             <div style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, padding: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ fontSize: 12.5, color: '#5B6B7F' }}>Checked in today</div>
-              <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? '…' : (data?.queue.filter((q) => q.checked_in_at).length ?? '—')}</div>
+              <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? 'â€¦' : (data?.queue.filter((q) => q.checked_in_at).length ?? 'â€”')}</div>
               <div style={{ fontSize: 12, color: '#5B6B7F' }}>Waiting or in room right now</div>
             </div>
             <Pressable className="hover-border-accent" ariaLabel={`Pending payments: ${money(data?.openTotalMinor)} across ${data?.openCount ?? 0} invoices. Open billing`} onClick={() => navigate('/reception/billing')} style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, padding: 18, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
               <div style={{ fontSize: 12.5, color: '#5B6B7F' }}>Pending payments</div>
-              <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? '…' : money(data?.openTotalMinor)}</div>
+              <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? 'â€¦' : money(data?.openTotalMinor)}</div>
               <div style={{ fontSize: 12, color: '#5B6B7F' }}>
-                {data?.openCount ?? 0} invoices{data && data.oldestOverdueDays > 0 ? ` · oldest ${data.oldestOverdueDays} days` : ''}
+                {data?.openCount ?? 0} invoices{data && data.oldestOverdueDays > 0 ? ` Â· oldest ${data.oldestOverdueDays} days` : ''}
               </div>
             </Pressable>
           </div>
@@ -143,10 +144,10 @@ export default function ReceptionDashboard() {
                       <div style={{ width: 64, color: '#5B6B7F' }}>{timeLabel(a.scheduled_start)}</div>
                       <div style={{ flex: 1, fontWeight: 600 }}>
                         {a.patient_name}
-                        {longWait && <span style={{ color: '#B54708', fontSize: 12, fontWeight: 600 }}> · waiting {a.waiting_minutes} min</span>}
+                        {longWait && <span style={{ color: '#B54708', fontSize: 12, fontWeight: 600 }}> Â· waiting {a.waiting_minutes} min</span>}
                       </div>
                       <div style={{ color: '#5B6B7F' }}>
-                        {[a.provider_name, a.department_name].filter(Boolean).join(' · ') || 'Triage pending'}
+                        {[a.provider_name, a.department_name].filter(Boolean).join(' Â· ') || 'Triage pending'}
                       </div>
                       {a.provider_name ? (
                         <Pressable
@@ -176,7 +177,7 @@ export default function ReceptionDashboard() {
                 <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Clinic load today</h2>
                 {!loading && !error && (data?.load.length ?? 0) === 0 && (
                   <div role="status" style={{ fontSize: 13, color: '#5B6B7F' }}>
-                    No department capacities configured yet — set daily slot capacity per department to see load.
+                    No department capacities configured yet â€” set daily slot capacity per department to see load.
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
@@ -189,7 +190,7 @@ export default function ReceptionDashboard() {
                         aria-valuenow={d.pct}
                         aria-valuemin={0}
                         aria-valuemax={100}
-                        aria-valuetext={`${d.pct}% — ${d.count} of ${d.capacity} slots booked`}
+                        aria-valuetext={`${d.pct}% â€” ${d.count} of ${d.capacity} slots booked`}
                         style={{ flex: 1, height: 8, borderRadius: 4, background: '#F4F6F9' }}
                       >
                         <div style={{ width: `${d.pct}%`, height: 8, borderRadius: 4, background: d.pct >= 90 ? '#B54708' : '#1D4ED8' }} />

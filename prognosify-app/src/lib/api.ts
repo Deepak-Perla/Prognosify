@@ -1,4 +1,4 @@
-import type { PostgrestError } from '@supabase/supabase-js';
+﻿import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { dayBounds, todayKey, weekBounds } from './format';
 
@@ -98,6 +98,7 @@ export interface FindingRow {
   detail: string;
   confidence: number | null;
   review_state: 'pending' | 'accepted' | 'rejected' | 'amended';
+  chart_committed_at: string | null;
 }
 
 export interface AppointmentRow {
@@ -142,7 +143,7 @@ export function appointmentTitle(a: AppointmentRow): string {
   if (a.block_title) return a.block_title;
   const who = a.patient ? `${a.patient.first_name} ${a.patient.last_name}` : 'Patient';
   const what = a.visit_type?.name ?? (a.origin === 'walk_in' ? 'Walk-in' : 'Visit');
-  return `${who} — ${what}`;
+  return `${who} â€” ${what}`;
 }
 
 export function providerName(a: AppointmentRow): string {
@@ -365,7 +366,7 @@ export interface NewAppointment {
 /** Front-desk booking. The double-booking exclusion constraint rejects collisions server-side. */
 export async function createAppointment(input: NewAppointment): Promise<string> {
   const ctx = await myStaffContext();
-  if (!ctx) throw new Error('No active staff seat — sign in again.');
+  if (!ctx) throw new Error('No active staff seat â€” sign in again.');
   const { data, error } = await supabase
     .from('appointment')
     .insert({
@@ -397,7 +398,7 @@ export interface StaffContext {
 
 /**
  * The signed-in user's seat: org + member id, resolved from app_user.active_organization_id and
- * the live membership — the same resolution the server-side helpers do from the JWT.
+ * the live membership â€” the same resolution the server-side helpers do from the JWT.
  */
 export async function myStaffContext(): Promise<StaffContext | null> {
   const { data: userData } = await supabase.auth.getUser();
@@ -489,7 +490,7 @@ export function toSexEnum(label: string): 'male' | 'female' | 'other' | 'undiscl
   return SEX_TO_ENUM[label] ?? 'undisclosed';
 }
 
-/** MRNs are allocated by the app ("104-882" style), unique per tenant — retry on collision. */
+/** MRNs are allocated by the app ("104-882" style), unique per tenant â€” retry on collision. */
 export async function registerPatient(input: {
   firstName: string;
   lastName: string;
@@ -499,7 +500,7 @@ export async function registerPatient(input: {
   email: string | null;
 }): Promise<string> {
   const ctx = await myStaffContext();
-  if (!ctx) throw new Error('No active staff seat — sign in again.');
+  if (!ctx) throw new Error('No active staff seat â€” sign in again.');
 
   const { data: existing } = await supabase
     .from('patient')
@@ -528,7 +529,7 @@ export async function registerPatient(input: {
     if (!error) return (data as { mrn: string }).mrn;
     if (!error.message.includes('duplicate key')) throw new Error(error.message);
   }
-  throw new Error('Could not allocate an MRN — please retry.');
+  throw new Error('Could not allocate an MRN â€” please retry.');
 }
 
 /* -------------------------------------------------------------------------- billing ----- */
@@ -552,7 +553,7 @@ export interface InvoiceRow {
   prior_auth_required: boolean;
   denial_risk_flag: boolean;
   denial_risk_note: string | null;
-  patient: { mrn: string; first_name: string; last_name: string } | null;
+  patient: { mrn: string; first_name: string; last_name: string; phone: string | null } | null;
   lines: { description: string; amount_minor: number }[];
   payments: { amount_minor: number; received_at: string }[];
 }
@@ -563,7 +564,7 @@ export async function getInvoices(): Promise<InvoiceRow[]> {
     .select(
       `id, number, status, currency, total_minor, patient_due_minor, due_at,
        prior_auth_required, denial_risk_flag, denial_risk_note,
-       patient:patient!invoice_patient_fk ( mrn, first_name, last_name ),
+       patient:patient!invoice_patient_fk ( mrn, first_name, last_name, phone ),
        lines:invoice_line!invoice_line_invoice_fk ( description, amount_minor ),
        payments:payment!payment_invoice_fk ( amount_minor, received_at )`,
     )
@@ -634,7 +635,7 @@ export async function getReleasedResults(): Promise<ReleasedResultRow[]> {
 export async function getMyMedications(): Promise<MedicationRow[]> {
   const { data, error } = await supabase
     .from('medication_order')
-    .select('id, drug_name, dose_text, frequency_text, status')
+    .select('id, drug_name, dose_text, frequency_text, status, refill_requested_at')
     .eq('status', 'active')
     .order('started_at', { ascending: false });
   return unwrap<MedicationRow>(data, error);
@@ -679,6 +680,7 @@ export interface MedicationRow {
   dose_text: string;
   frequency_text: string;
   status: string;
+  refill_requested_at: string | null;
 }
 
 export interface CareTeamRow {
@@ -736,7 +738,7 @@ export async function getPatientChart(patientId: string): Promise<PatientChart> 
         .is('inactivated_at', null),
       supabase
         .from('medication_order')
-        .select('id, drug_name, dose_text, frequency_text, status')
+        .select('id, drug_name, dose_text, frequency_text, status, refill_requested_at')
         .eq('patient_id', patientId)
         .eq('record_status', 'active')
         .neq('status', 'discontinued')
@@ -771,7 +773,7 @@ export async function getPatientChart(patientId: string): Promise<PatientChart> 
         .order('as_of', { ascending: false }),
       supabase
         .from('ai_finding')
-        .select('id, kind, severity, title, detail, confidence, review_state')
+        .select('id, kind, severity, title, detail, confidence, review_state, chart_committed_at')
         .eq('patient_id', patientId)
         .order('display_order'),
     ]);
@@ -831,4 +833,313 @@ export async function getPatientChart(patientId: string): Promise<PatientChart> 
     trajectory,
     run,
   };
+}
+
+/* ==================================================================== */
+/*  Portal + write flows (060_portal_flows and the existing tables)     */
+/* ==================================================================== */
+
+// ---- doctor writes -------------------------------------------------------------
+
+export async function addClinicalNote(input: {
+  organizationId: string;
+  patientId: string;
+  authorMemberId: string;
+  body: string;
+}): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabase.from('clinical_note').insert({
+    organization_id: input.organizationId,
+    patient_id: input.patientId,
+    author_member_id: input.authorMemberId,
+    note_type: 'progress',
+    body: input.body.trim(),
+    occurred_at: now,
+    signed_at: now,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export interface LabPanelRow {
+  id: string;
+  name: string;
+}
+
+export async function getLabPanels(): Promise<LabPanelRow[]> {
+  const { data, error } = await supabase
+    .from('lab_panel')
+    .select('id, name')
+    .order('name');
+  return unwrap<LabPanelRow>(data, error);
+}
+
+export async function orderLab(input: {
+  organizationId: string;
+  patientId: string;
+  panelId: string;
+  orderedByMemberId: string;
+  priority: 'routine' | 'urgent' | 'stat';
+}): Promise<void> {
+  const { error } = await supabase.from('lab_order').insert({
+    organization_id: input.organizationId,
+    patient_id: input.patientId,
+    panel_id: input.panelId,
+    ordered_by: input.orderedByMemberId,
+    priority: input.priority,
+    status: 'ordered',
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function acceptFinding(
+  findingId: string,
+  organizationId: string,
+  memberId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('ai_finding')
+    .update({
+      review_state: 'accepted',
+      reviewed_by_member_id: memberId,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', findingId)
+    .eq('organization_id', organizationId)
+    .eq('review_state', 'pending');
+  // .eq on review_state makes the accept idempotent; a second click is a no-op.
+  if (error && !error.message.includes('0 rows')) throw new Error(error.message);
+}
+
+export async function commitFindingToChart(
+  findingId: string,
+  organizationId: string,
+  memberId: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('ai_finding')
+    .update({ chart_committed_at: now, chart_committed_by_member_id: memberId })
+    .eq('id', findingId)
+    .eq('organization_id', organizationId)
+    .is('chart_committed_at', null);
+  if (error && !error.message.includes('0 rows')) throw new Error(error.message);
+}
+
+// ---- reception billing writes ---------------------------------------------------
+
+export const PAYMENT_METHODS = ['cash', 'card', 'upi', 'netbanking', 'cheque'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export async function recordPayment(input: {
+  invoiceId: string;
+  organizationId: string;
+  amountMinor: number;
+  method: PaymentMethod;
+  receivedByMemberId: string;
+}): Promise<void> {
+  const { error } = await supabase.from('payment').insert({
+    organization_id: input.organizationId,
+    invoice_id: input.invoiceId,
+    amount_minor: input.amountMinor,
+    method: input.method,
+    received_by: input.receivedByMemberId,
+    received_at: new Date().toISOString(),
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Front-desk invoice updates: settle to paid, or clear an auth hold with the payer's ref. */
+export async function updateInvoice(
+  invoiceId: string,
+  patch: { status?: InvoiceRow['status']; prior_auth_ref?: string | null },
+): Promise<void> {
+  const { error } = await supabase
+    .from('invoice')
+    .update(patch)
+    .eq('id', invoiceId);
+  if (error) throw new Error(error.message);
+}
+
+// ---- settings -------------------------------------------------------------------
+
+export interface OrgSettingRow {
+  key: string;
+  value: unknown;
+}
+
+export async function getMySettings(memberId: string): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase
+    .from('org_setting')
+    .select('key, value')
+    .eq('member_id', memberId);
+  const rows = unwrap<OrgSettingRow>(data, error);
+  return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+}
+
+export async function saveMySetting(
+  organizationId: string,
+  memberId: string,
+  key: string,
+  value: unknown,
+): Promise<void> {
+  // org_setting keys its rows by uuid, not by (member, key), so resolve first.
+  const existing = await supabase
+    .from('org_setting')
+    .select('id')
+    .eq('member_id', memberId)
+    .eq('key', key)
+    .limit(1);
+  if (existing.error) throw new Error(existing.error.message);
+  const current = (existing.data ?? []) as { id: string }[];
+  if (current.length > 0) {
+    const { error } = await supabase
+      .from('org_setting')
+      .update({ value: value as never, updated_by: memberId })
+      .eq('id', current[0].id);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase.from('org_setting').insert({
+      organization_id: organizationId,
+      member_id: memberId,
+      key,
+      value: value as never,
+      updated_by: memberId,
+    });
+    if (error) throw new Error(error.message);
+  }
+}
+
+// ---- patient portal: identity, care team, messages, care plan, booking ----------
+
+export interface PortalMe {
+  patient_id: string;
+  mrn: string;
+  full_name: string;
+}
+
+/** The signed-in patient's own chart identity (RLS-resolved server side). */
+export async function getPortalIdentity(): Promise<PortalMe | null> {
+  const { data, error } = await supabase.from('v_portal_me').select('*').limit(1);
+  return one<PortalMe>(data, error);
+}
+
+export interface CareContact {
+  member_id: string;
+  full_name: string;
+  role: string;
+  assignment_note: string | null;
+  specialty: string | null;
+}
+
+export async function getCareTeamContacts(): Promise<CareContact[]> {
+  const { data, error } = await supabase
+    .from('v_portal_care_team')
+    .select('*')
+    .order('full_name');
+  return unwrap<CareContact>(data, error);
+}
+
+export interface MessageRow {
+  id: string;
+  sender_member_id: string | null;
+  sent_by_patient: boolean;
+  body: string;
+  created_at: string;
+}
+
+export async function getThread(patientId: string): Promise<MessageRow[]> {
+  const { data, error } = await supabase
+    .from('message')
+    .select('id, sender_member_id, sent_by_patient, body, created_at')
+    .eq('patient_id', patientId)
+    .order('created_at');
+  return unwrap<MessageRow>(data, error);
+}
+
+export async function sendPatientMessage(patientId: string, organizationId: string, body: string): Promise<void> {
+  const { error } = await supabase.from('message').insert({
+    organization_id: organizationId,
+    patient_id: patientId,
+    sent_by_patient: true,
+    body: body.trim(),
+  });
+  if (error) throw new Error(error.message);
+}
+
+export interface CareGoalRow {
+  id: string;
+  label: string;
+  target_label: string | null;
+  progress_pct: number;
+}
+
+export async function getCareGoals(patientId: string): Promise<CareGoalRow[]> {
+  const { data, error } = await supabase
+    .from('care_goal')
+    .select('id, label, target_label, progress_pct')
+    .eq('patient_id', patientId)
+    .order('created_at');
+  return unwrap<CareGoalRow>(data, error);
+}
+
+export interface CareTaskRow {
+  id: string;
+  title: string;
+  detail: string | null;
+  schedule_text: string | null;
+  last_done_at: string | null;
+}
+
+export async function getCarePlanTasks(patientId: string): Promise<CareTaskRow[]> {
+  const { data, error } = await supabase
+    .from('care_plan_task')
+    .select('id, title, detail, schedule_text, last_done_at')
+    .eq('patient_id', patientId)
+    .order('sort_order');
+  return unwrap<CareTaskRow>(data, error);
+}
+
+export async function setTaskDone(taskId: string, done: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('care_plan_task')
+    .update({ last_done_at: done ? new Date().toISOString() : null })
+    .eq('id', taskId);
+  if (error) throw new Error(error.message);
+}
+
+/** The one column a patient may write on their prescriptions (trigger-enforced). */
+export async function requestRefill(medicationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('medication_order')
+    .update({ refill_requested_at: new Date().toISOString() })
+    .eq('id', medicationId);
+  if (error) throw new Error(error.message);
+}
+
+// ---- portal booking ---------------------------------------------------------------
+
+export interface SlotRow {
+  slot_start: string;
+  slot_end: string;
+}
+
+export async function getPortalSlots(providerMemberId: string): Promise<SlotRow[]> {
+  const { data, error } = await supabase
+    .rpc('portal_available_slots', { p_provider: providerMemberId });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SlotRow[];
+}
+
+export async function bookPortalSlot(
+  providerMemberId: string,
+  visitTypeId: string,
+  startISO: string,
+): Promise<string> {
+  const { data, error } = await supabase.rpc('portal_book_appointment', {
+    p_provider: providerMemberId,
+    p_visit_type: visitTypeId,
+    p_start: startISO,
+  });
+  if (error) throw new Error(error.message);
+  return data as string;
 }

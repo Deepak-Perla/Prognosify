@@ -1,8 +1,8 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+﻿import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SideNav from '../../components/SideNav';
 import { hiChip, medChip, lowChip } from '../../data/mock';
-import { Chip, Pressable } from '../../components/ui';
+import { Busy, Chip, Pressable } from '../../components/ui';
 import { useAsync } from '../../lib/useAsync';
 import { getLabReviewQueue, getPatientSummaries, type LabQueueRow } from '../../lib/api';
 import { timeLabel, visitStamp } from '../../lib/format';
@@ -17,7 +17,7 @@ const flagLabel = (flag: string): string => {
   switch (flag) {
     case 'critical_high':
     case 'critical_low':
-      return 'Critical ↑';
+      return 'Critical â†‘';
     case 'high':
     case 'low':
       return 'Abnormal';
@@ -49,7 +49,7 @@ const filters: LabFilter[] = [
     prefix: 'Abnormal',
     label: (n) => `Abnormal (${n})`,
     color: '#B42318',
-    note: 'Flagged anything but normal — includes criticals.',
+    note: 'Flagged anything but normal â€” includes criticals.',
     match: (row) => row.abnormal_flag !== 'normal',
   },
   {
@@ -100,10 +100,10 @@ export default function Labs() {
         <div style={{ flex: 1, padding: '24px 28px', overflow: 'auto' }}>
           <div role="table" aria-label="Labs awaiting review" style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, overflow: 'hidden' }}>
             <div role="row" style={{ display: 'grid', gridTemplateColumns: GRID_COLUMNS, padding: '12px 20px', borderBottom: '1px solid #DDE3EB', fontSize: 12, fontWeight: 600, color: '#5B6B7F', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
-              <div role="columnheader">Patient</div><div role="columnheader">Panel</div><div role="columnheader">Flag</div><div role="columnheader">Resulted</div><div role="columnheader">Result · range</div><div role="columnheader"></div>
+              <div role="columnheader">Patient</div><div role="columnheader">Panel</div><div role="columnheader">Flag</div><div role="columnheader">Resulted</div><div role="columnheader">Result Â· range</div><div role="columnheader"></div>
             </div>
             {loading && (
-              <div role="status" style={{ padding: '14px 20px', fontSize: 13.5, color: '#5B6B7F' }}>Loading lab queue…</div>
+              <div role="status" style={{ padding: '14px 20px', fontSize: 13.5, color: '#5B6B7F' }}><Busy label="Loading results" fill={false} /></div>
             )}
             {error && (
               <div role="alert" style={{ padding: '14px 20px', fontSize: 13.5, color: '#B42318' }}>Could not load results: {error}</div>
@@ -113,7 +113,7 @@ export default function Labs() {
                 <div role="cell" style={{ fontWeight: 600 }}>{r.patient_name}</div>
                 <div role="cell" style={{ color: '#5B6B7F' }}>
                   {r.test_name}
-                  <span style={{ color: '#8A97A8' }}> · {r.panel_name}</span>
+                  <span style={{ color: '#8A97A8' }}> Â· {r.panel_name}</span>
                 </div>
                 <div role="cell"><span style={flagStyle(r.abnormal_flag)}>{flagLabel(r.abnormal_flag)}</span></div>
                 <div role="cell" style={{ color: '#5B6B7F' }}>
@@ -122,16 +122,16 @@ export default function Labs() {
                 <div role="cell" style={{ color: r.abnormal_flag !== 'normal' ? '#3A4A5E' : '#5B6B7F', fontSize: 12.5 }}>
                   {r.value_numeric != null
                     ? `${r.value_numeric} ${r.unit ?? ''}`.trim()
-                    : r.value_text ?? '—'}
-                  {r.reference_range ? ` · range ${r.reference_range}` : ''}
+                    : r.value_text ?? 'â€”'}
+                  {r.reference_range ? ` Â· range ${r.reference_range}` : ''}
                 </div>
                 <div role="cell">
                   <Pressable
                     onClick={() => r.mrn && navigate(`/doctor/patients/${r.mrn}`)}
-                    ariaLabel={`Review ${r.patient_name} — ${r.test_name}`}
+                    ariaLabel={`Review ${r.patient_name} â€” ${r.test_name}`}
                     style={{ color: '#1D4ED8', fontWeight: 600, fontSize: 13, cursor: 'pointer', textAlign: 'right', width: '100%' }}
                   >
-                    Review →
+                    Review â†’
                   </Pressable>
                 </div>
               </div>

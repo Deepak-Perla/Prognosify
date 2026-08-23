@@ -1,7 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PortalNav from '../../components/PortalNav';
-import { Pressable, pressableReset } from '../../components/ui';
+import { Busy, Pressable, pressableReset } from '../../components/ui';
 import { useAsync } from '../../lib/useAsync';
 import {
   appointmentTitle,
@@ -75,7 +75,7 @@ export default function PatientHome() {
           <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
             <div style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#5B6B7F', letterSpacing: '0.05em' }}>NEXT APPOINTMENT</div>
-              {loading && <div role="status" style={{ fontSize: 14, color: '#5B6B7F' }}>Loading…</div>}
+              {loading && <div role="status" style={{ fontSize: 14, color: '#5B6B7F' }}><Busy label="Loading" fill={false} /></div>}
               {!loading && !error && !data?.next && (
                 <div style={{ fontSize: 14, color: '#5B6B7F', lineHeight: 1.6 }}>
                   Nothing booked right now. Book a visit below and it will appear here.
@@ -93,7 +93,7 @@ export default function PatientHome() {
                       <div style={{ fontSize: 13.5, color: '#5B6B7F' }}>
                         {[dayLabel(data.next.scheduled_start), timeLabel(data.next.scheduled_start), data.next.room_label ?? data.next.department?.name ?? null]
                           .filter(Boolean)
-                          .join(' · ')}
+                          .join(' Â· ')}
                       </div>
                     </div>
                   </div>
@@ -106,7 +106,7 @@ export default function PatientHome() {
                       disabled={confirmed || confirming}
                       aria-disabled={confirmed || undefined}
                       title={confirmed
-                        ? `Confirmed ${visitStamp(data.next.confirmed_at)} — the clinic can see this.`
+                        ? `Confirmed ${visitStamp(data.next.confirmed_at)} â€” the clinic can see this.`
                         : 'Sends your confirmation to the clinic.'}
                       style={{
                         ...pressableReset,
@@ -120,7 +120,7 @@ export default function PatientHome() {
                         cursor: confirmed ? 'default' : 'pointer',
                       }}
                     >
-                      {confirming ? 'Sending…' : confirmed ? 'Confirmed ✓' : 'Confirm'}
+                      {confirming ? 'Sendingâ€¦' : confirmed ? 'Confirmed âœ“' : 'Confirm'}
                     </button>
                     <Pressable onClick={() => navigate('/patient/book')} style={{ border: '1px solid #DDE3EB', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 500 }}>Reschedule</Pressable>
                   </div>
@@ -137,11 +137,11 @@ export default function PatientHome() {
                   <span style={{ background: '#FEFAF0', color: '#B54708', border: '1px solid #F3E3C2', borderRadius: 12, padding: '2px 9px', fontSize: 11.5, fontWeight: 600 }}>Needs attention</span>
                 )}
               </div>
-              {loading && <div role="status" style={{ fontSize: 14, color: '#5B6B7F' }}>Loading…</div>}
+              {loading && <div role="status" style={{ fontSize: 14, color: '#5B6B7F' }}><Busy label="Loading" fill={false} /></div>}
               {!loading && latest ? (
                 <>
                   <div style={{ fontSize: 16, fontWeight: 600 }}>
-                    {latest.test.name} — {latest.value_numeric != null ? `${latest.value_numeric}${latest.unit ? ` ${latest.unit}` : ''}` : latest.value_text}
+                    {latest.test.name} â€” {latest.value_numeric != null ? `${latest.value_numeric}${latest.unit ? ` ${latest.unit}` : ''}` : latest.value_text}
                   </div>
                   <div style={{ fontSize: 13, color: '#5B6B7F', lineHeight: 1.5 }}>
                     Resulted {visitStamp(latest.resulted_at)}. Your care team sees everything here too.
@@ -154,7 +154,7 @@ export default function PatientHome() {
                   </div>
                 )
               )}
-              <div style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>View result →</div>
+              <div style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>View result â†’</div>
             </Pressable>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
@@ -162,7 +162,7 @@ export default function PatientHome() {
               <div style={{ fontSize: 14, fontWeight: 600 }}>Today's care plan</div>
               <div style={{ fontSize: 13, color: '#5B6B7F', lineHeight: 1.6 }}>
                 {(data?.medications.length ?? 0) > 0
-                  ? data!.medications.map((m) => `${m.drug_name} ${m.dose_text} · ${m.frequency_text}`).join('\n')
+                  ? data!.medications.map((m) => `${m.drug_name} ${m.dose_text} Â· ${m.frequency_text}`).join('\n')
                   : 'Your care team has not set up plan items yet.'}
               </div>
             </Pressable>
@@ -175,7 +175,7 @@ export default function PatientHome() {
             <Pressable className="hover-border-accent" onClick={() => navigate('/patient/book')} style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 14, padding: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Need to be seen?</div>
               <div style={{ fontSize: 13, color: '#5B6B7F', lineHeight: 1.6 }}>Book a visit with your care team or a video consult.</div>
-              <div style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>Book a visit →</div>
+              <div style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600 }}>Book a visit â†’</div>
             </Pressable>
           </div>
           <Pressable
@@ -188,7 +188,7 @@ export default function PatientHome() {
               <div style={{ fontSize: 13, fontWeight: 600, color: '#8FB0FF' }}>YOUR RESULTS</div>
               <div style={{ fontSize: 13.5, color: '#C7D2E4' }}>
                 {data && data.results.length > 0
-                  ? `${data.results.length} result${data.results.length > 1 ? 's' : ''} shared by your care team — the newest from ${visitStamp(data.results[0].resulted_at)}${data.next ? `. Next visit: ${visitStamp(data.next.scheduled_start)} with ${providerName(data.next)}.` : '.'}`
+                  ? `${data.results.length} result${data.results.length > 1 ? 's' : ''} shared by your care team â€” the newest from ${visitStamp(data.results[0].resulted_at)}${data.next ? `. Next visit: ${visitStamp(data.next.scheduled_start)} with ${providerName(data.next)}.` : '.'}`
                   : 'When your care team shares a result, it lands here first.'}
               </div>
             </div>

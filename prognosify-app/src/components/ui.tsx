@@ -76,12 +76,13 @@ export type PressableProps = {
   ariaLabel?: string;
   ariaPressed?: AriaAttributes['aria-pressed'];
   ariaCurrent?: AriaAttributes['aria-current'];
+  ariaExpanded?: boolean;
   className?: string;
   title?: string;
 };
 
 /** Drop-in replacement for `<div onClick>`. Base `display` is `block`; override it via `style`. */
-export function Pressable({ onClick, style, children, disabled, ariaLabel, ariaPressed, ariaCurrent, className, title }: PressableProps) {
+export function Pressable({ onClick, style, children, disabled, ariaLabel, ariaPressed, ariaCurrent, ariaExpanded, className, title }: PressableProps) {
   return (
     <button
       type="button"
@@ -90,6 +91,7 @@ export function Pressable({ onClick, style, children, disabled, ariaLabel, ariaP
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
       aria-current={ariaCurrent}
+      aria-expanded={ariaExpanded}
       className={className}
       title={title}
       style={{ ...pressableReset, ...style }}
@@ -315,6 +317,44 @@ export function Chip({ selected, onClick, children, style, ariaLabel, className,
     >
       {children}
     </Pressable>
+  );
+}
+
+/* ----------------------------------------------------------------------- Busy */
+
+export type BusyProps = {
+  /** What is loading, e.g. "Loading patients…". Shown beside the spinner. */
+  label?: string;
+  /** Center in a full-height area (default) vs inline at the top of a card. */
+  fill?: boolean;
+  onDark?: boolean;
+};
+
+/**
+ * The one loading affordance every data-backed screen uses: an animated ring plus the
+ * operation being performed. A visible, honest cue so a not-yet-rendered table never reads
+ * as "no data".
+ */
+export function Busy({ label = 'Loading…', fill = true, onDark }: BusyProps) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        padding: fill ? '48px 0' : '12px 0',
+        width: '100%',
+        height: fill ? '100%' : undefined,
+        color: onDark ? '#C7D2E4' : '#5B6B7F',
+        fontSize: 13.5,
+      }}
+    >
+      <span aria-hidden="true" className={`ui-spinner${onDark ? ' on-dark' : ''}`} />
+      {label}
+    </div>
   );
 }
 
