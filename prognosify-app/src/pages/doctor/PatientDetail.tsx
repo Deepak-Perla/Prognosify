@@ -5,17 +5,14 @@ import SideNav from '../../components/SideNav';
 import { Busy, Pressable, TextArea } from '../../components/ui';
 import { useAsync } from '../../lib/useAsync';
 import { useAuth } from '../../lib/auth';
-import {
-  addClinicalNote,
+import {  addClinicalNote,
   getLabPanels,
   getPatientChart,
   getPatientSummaryByMrn,
   orderLab,
-  RISK_TYPE_LABEL,
   type LabQueueRow,
-  type RiskScoreRow,
 } from '../../lib/api';
-import { ageSex, horizonLabel, pct, stampWithTime, timeLabel, visitStamp } from '../../lib/format';
+import { ageSex, stampWithTime, visitStamp } from '../../lib/format';
 
 /**
  * Chart writes go straight to Supabase under the signed-in doctor's seat: notes are inserted
@@ -141,9 +138,7 @@ export default function PatientDetail() {
   }
 
   const { summary, chart } = data;
-  const initials = summary.full_name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('');
-  const leadScore = chart.riskScores.find((s) => s.value_kind === 'probability') ?? chart.riskScores[0] ?? null;
-  const allergyLine = chart.allergies.length > 0 ? ` · Allergies: ${chart.allergies.map((a) => a.substance).join(', ')}` : '';
+  const initials = summary.full_name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('');  const allergyLine = chart.allergies.length > 0 ? ` · Allergies: ${chart.allergies.map((a) => a.substance).join(', ')}` : '';
 
   // Vitals cards follow the mock's colour language: red when clearly abnormal, amber borderline.
   const hr = chart.vitals?.heart_rate_bpm ?? null;
@@ -174,11 +169,6 @@ export default function PatientDetail() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{summary.full_name}</h1>
-                {leadScore && (
-                  <span style={{ background: leadScore.band === 'high' || leadScore.band === 'critical' ? '#FEF5F4' : leadScore.band === 'medium' ? '#FEFAF0' : '#F0F7F2', color: leadScore.band === 'high' || leadScore.band === 'critical' ? '#B42318' : leadScore.band === 'medium' ? '#B54708' : '#116B3F', border: '1px solid #E5E9F0', borderRadius: 12, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
-                    {(leadScore.band === 'high' || leadScore.band === 'critical' ? 'High' : leadScore.band)} risk · {leadScore.probability != null ? pct(leadScore.probability) : leadScore.band}
-                  </span>
-                )}
               </div>
               <div style={{ fontSize: 13, color: '#5B6B7F' }}>
                 {[
@@ -209,7 +199,6 @@ export default function PatientDetail() {
             >
               {ordering ? 'Close order' : 'Order labs'}
             </Pressable>
-            <Pressable onClick={() => navigate(`/doctor/patients/${summary.mrn}/prognosis`)} style={{ background: '#1D4ED8', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>AI prognosis report</Pressable>
           </div>
         </div>
         <div style={{ flex: 1, display: 'flex', gap: 16, padding: '24px 28px', overflow: 'auto' }}>
@@ -363,42 +352,26 @@ export default function PatientDetail() {
             </div>
           </div>
           <div style={{ width: 360, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div className="on-dark" style={{ background: '#0F1C2E', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 14, color: '#fff' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ fontSize: 13, fontWeight: 600, color: '#8FB0FF', margin: 0 }}>AI PROGNOSIS</h2>
-                {chart.run && <div style={{ fontSize: 11, color: '#5B6B7F' }}>Updated {timeLabel(chart.run.created_at)}</div>}
-              </div>
-              {chart.riskScores.filter((s) => s.value_kind === 'probability').length === 0 ? (
-                <div role="status" style={{ fontSize: 13, lineHeight: 1.6, color: '#C7D2E4' }}>
-                  No AI risk scores yet for this patient. Open the prognosis report to request a run once the model service is connected.
-                </div>
+            <div style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Conditions &amp; allergies</h2>
+              {chart.conditions.length === 0 && chart.allergies.length === 0 ? (
+                <div style={{ fontSize: 13.5, color: '#5B6B7F' }}>Nothing on record.</div>
               ) : (
-                chart.riskScores
-                  .filter((s) => s.value_kind === 'probability')
-                  .map((s: RiskScoreRow) => {
-                    const value = pct(s.probability);
-                    const tone = s.band === 'high' || s.band === 'critical' ? '#FF8A7A' : s.band === 'medium' ? '#FFC66B' : '#8FD6AC';
-                    return (
-                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                          <div style={{ color: '#C7D2E4' }}>
-                            {RISK_TYPE_LABEL[s.risk_type]}{s.horizon ? ` (${horizonLabel(s.horizon)})` : ''}
-                          </div>
-                          <div style={{ fontWeight: 700, color: tone }}>{s.band === 'critical' || s.band === 'high' ? 'High' : s.band === 'medium' ? 'Medium' : 'Low'} · {value}</div>
-                        </div>
-                        <div aria-hidden="true" style={{ height: 6, borderRadius: 3, background: '#22344E' }}>
-                          <div style={{ width: `${Math.round((s.probability ?? 0) * 100)}%`, height: 6, borderRadius: 3, background: tone }} />
-                        </div>
-                      </div>
-                    );
-                  })
-              )}
-              {chart.factors.length > 0 && (
-                <div style={{ fontSize: 13, lineHeight: 1.6, color: '#C7D2E4' }}>
-                  Key drivers: {chart.factors.slice(0, 3).map((f) => f.label).join(', ')}. Recommend reviewing these alongside the full report before rounds.
+                <div style={{ fontSize: 13.5, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {chart.conditions.map((c) => (
+                    <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div>{c.is_primary ? <strong>{c.name}</strong> : c.name}</div>
+                      <div style={{ color: '#5B6B7F' }}>{c.clinical_status}</div>
+                    </div>
+                  ))}
+                  {chart.allergies.map((a) => (
+                    <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ color: '#B42318' }}>{a.substance}</div>
+                      <div style={{ color: '#B42318' }}>allergy · {a.severity}</div>
+                    </div>
+                  ))}
                 </div>
               )}
-              <Pressable onClick={() => navigate(`/doctor/patients/${summary.mrn}/prognosis`)} style={{ background: '#1D4ED8', borderRadius: 8, padding: '10px 0', textAlign: 'center', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Open full report</Pressable>
             </div>
             <div style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Medications</h2>

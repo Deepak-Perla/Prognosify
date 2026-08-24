@@ -52,7 +52,7 @@ export default function Login() {
         <Logo size={30} tone="white" gap={10} wordmarkSize={18} wordmarkWeight={600} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1.2 }}>Clinical foresight for every patient.</div>
-          <div style={{ fontSize: 15, color: '#9FB0C4', lineHeight: 1.6 }}>AI-assisted prognoses, risk flags and care planning — in one hospital dashboard.</div>
+          <div style={{ fontSize: 15, color: '#9FB0C4', lineHeight: 1.6 }}>Scheduling, records, billing and patient messaging — one clean dashboard for your clinic.</div>
         </div>
         <div style={{ fontSize: 12, color: '#5B6B7F' }}>DPDP-aligned · Demo data is synthetic</div>
       </div>

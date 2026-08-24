@@ -6,7 +6,6 @@ import Settings from './pages/Settings';
 import Dashboard from './pages/doctor/Dashboard';
 import Patients from './pages/doctor/Patients';
 import PatientDetail from './pages/doctor/PatientDetail';
-import Prognosis from './pages/doctor/Prognosis';
 import Schedule from './pages/doctor/Schedule';
 import Labs from './pages/doctor/Labs';
 import AIChat from './pages/doctor/AIChat';
@@ -124,7 +123,6 @@ export default function App() {
           <Route path="/doctor/dashboard" element={doctor(<Dashboard />)} />
           <Route path="/doctor/patients" element={doctor(<Patients />)} />
           <Route path="/doctor/patients/:mrn" element={doctor(<PatientDetail />)} />
-          <Route path="/doctor/patients/:mrn/prognosis" element={doctor(<Prognosis />)} />
           <Route path="/doctor/schedule" element={doctor(<Schedule />)} />
           <Route path="/doctor/labs" element={doctor(<Labs />)} />
           <Route path="/doctor/ai-assistant" element={doctor(<AIChat />)} />

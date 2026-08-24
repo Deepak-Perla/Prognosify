@@ -22,8 +22,8 @@ const SETTING_KEYS = {
 } as const;
 
 const aiPreferences = [
-  { key: 'riskFlags', label: 'Show AI risk flags on patient lists' },
-  { key: 'confirmBeforeChart', label: 'Require confirmation before adding AI notes to chart' },
+  { key: 'riskFlags', label: 'Show smart suggestions on patient lists' },
+  { key: 'confirmBeforeChart', label: 'Require confirmation before AI-drafted text is saved' },
   { key: 'dailyEmail', label: 'Daily AI summary email' },
 ] as const;
 

@@ -1,28 +1,13 @@
 import { useId, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SideNav from '../../components/SideNav';
-import { hiChip, medChip, lowChip, chip } from '../../data/mock';
-import type { CSSProperties } from 'react';
 import { Busy, Chip, TextField, pressableReset } from '../../components/ui';
 import { useAsync } from '../../lib/useAsync';
-import {
-  getLatestRiskScores,
-  getPatientSummaries,
-  type Band,
-  type PatientSummaryRow,
-  type RiskScoreRow,
-} from '../../lib/api';
+import { getPatientSummaries, type PatientSummaryRow } from '../../lib/api';
 import { ageSex, dayKey, shiftDay, todayKey, visitStamp } from '../../lib/format';
 
 const RECENT_DAYS = 7;
 const PAGE_SIZE = 8;
-
-const bandChip: Record<Band, CSSProperties> = {
-  high: hiChip,
-  critical: chip('#FEF5F4', '#B42318', '#F1D3D0'),
-  medium: medChip,
-  low: lowChip,
-};
 
 interface Row {
   patientId: string;
@@ -30,31 +15,18 @@ interface Row {
   mrn: string;
   status: string;
   condition: string;
-  riskLabel: string | null;
-  riskStyle: CSSProperties | null;
   lastVisitAt: string | null;
 }
 
-function toRow(summary: PatientSummaryRow, risk: RiskScoreRow | undefined): Row {
-  const label = risk ? `${risk.band === 'critical' ? 'High' : bandLabel(risk.band)} · ${riskPercent(risk)}` : null;
+function toRow(summary: PatientSummaryRow): Row {
   return {
     patientId: summary.patient_id,
     name: `${summary.full_name} · ${ageSex(summary.age_years, summary.sex).trim()}`,
     mrn: summary.mrn,
     status: summary.is_inpatient ? `Inpatient · ${summary.current_room ?? 'ward'}` : 'Outpatient',
     condition: summary.primary_condition ?? '—',
-    riskLabel: label,
-    riskStyle: risk ? bandChip[risk.band] : null,
     lastVisitAt: summary.last_visit_at,
   };
-}
-
-const bandLabel = (band: Band): string => band.charAt(0).toUpperCase() + band.slice(1);
-
-/** Range scores (e.g. length of stay) have no probability; show the band alone on lists. */
-function riskPercent(risk: RiskScoreRow): string {
-  if (risk.probability == null) return bandLabel(risk.band);
-  return `${Math.round(risk.probability * 100)}%`;
 }
 
 type Filter = {
@@ -65,11 +37,6 @@ type Filter = {
 
 const filtersFor = (rows: Row[]): Filter[] => [
   { label: `All (${rows.length})`, note: 'Every active patient record at this hospital.', match: () => true },
-  {
-    label: `High risk (${rows.filter((r) => r.riskLabel?.startsWith('High')).length})`,
-    note: "Latest AI risk score for the patient is banded high or critical. Scores appear only for patients on your care team.",
-    match: (row) => row.riskLabel?.startsWith('High') === true,
-  },
   {
     label: `Inpatient (${rows.filter((r) => r.status.startsWith('Inpatient')).length})`,
     note: 'Currently admitted with an open inpatient encounter.',
@@ -94,7 +61,7 @@ const daysSinceVisit = (lastVisitAt: string | null): number => {
   return diff;
 };
 
-const GRID_COLUMNS = '2.2fr 1fr 1.2fr 1.6fr 1.2fr 1fr';
+const GRID_COLUMNS = '2.2fr 1fr 1.4fr 1.8fr 1fr';
 
 const visuallyHidden = {
   position: 'absolute' as const,
@@ -116,9 +83,8 @@ export default function Patients() {
   const [page, setPage] = useState(0);
 
   const { data, error, loading } = useAsync(async () => {
-    const [summaries, risks] = await Promise.all([getPatientSummaries(), getLatestRiskScores()]);
-    const riskByPatient = new Map(risks.map((r) => [r.patient_id, r]));
-    return summaries.map((s) => toRow(s, riskByPatient.get(s.patient_id)));
+    const summaries = await getPatientSummaries();
+    return summaries.map(toRow);
   }, []);
 
   const rows = useMemo(() => data ?? [], [data]);
@@ -185,10 +151,10 @@ export default function Patients() {
           </div>
           <div role="table" aria-label="Patients" style={{ background: '#ffffff', border: '1px solid #DDE3EB', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div role="row" style={{ display: 'grid', gridTemplateColumns: GRID_COLUMNS, padding: '12px 20px', borderBottom: '1px solid #DDE3EB', fontSize: 12, fontWeight: 600, color: '#5B6B7F', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
-              <div role="columnheader">Patient</div><div role="columnheader">MRN</div><div role="columnheader">Status</div><div role="columnheader">Primary condition</div><div role="columnheader">AI risk</div><div role="columnheader">Last visit</div>
+              <div role="columnheader">Patient</div><div role="columnheader">MRN</div><div role="columnheader">Status</div><div role="columnheader">Primary condition</div><div role="columnheader">Last visit</div>
             </div>
             {loading && (
-              <div role="status" style={{ padding: '18px 20px', fontSize: 13.5, color: '#5B6B7F' }}><Busy label="Loading patients" fill={false} /></div>
+              <div role="status" style={{ padding: '18px 20px' }}><Busy label="Loading patients" fill={false} /></div>
             )}
             {error && (
               <div role="alert" style={{ padding: '18px 20px', fontSize: 13.5, color: '#B42318' }}>
@@ -210,13 +176,12 @@ export default function Patients() {
                 <div role="cell" style={{ color: '#5B6B7F' }}>{row.mrn}</div>
                 <div role="cell">{row.status}</div>
                 <div role="cell" style={{ color: '#5B6B7F' }}>{row.condition}</div>
-                <div role="cell">{row.riskLabel && row.riskStyle ? <span style={row.riskStyle}>{row.riskLabel}</span> : <span style={{ color: '#8A97A8' }}>—</span>}</div>
                 <div role="cell" style={{ color: '#5B6B7F' }}>{visitStamp(row.lastVisitAt)}</div>
               </button>
             ))}
             {!loading && !error && visible.length === 0 && (
               <div role="row" style={{ padding: '14px 20px', fontSize: 13.5, color: '#5B6B7F' }}>
-                <div role="cell" aria-colspan={6}>No patients match this search or filter.</div>
+                <div role="cell" aria-colspan={5}>No patients match this search or filter.</div>
               </div>
             )}
           </div>

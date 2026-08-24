@@ -715,6 +715,7 @@ export interface AnalysisRunInfo {
 export interface PatientChart {
   vitals: VitalRow | null;
   allergies: AllergyRow[];
+  conditions: { id: string; name: string; clinical_status: string; is_primary: boolean }[];
   medications: MedicationRow[];
   careTeam: CareTeamRow[];
   timeline: TimelineRow[];
@@ -727,7 +728,7 @@ export interface PatientChart {
 }
 
 export async function getPatientChart(patientId: string): Promise<PatientChart> {
-  const [vitalsRes, allergyRes, medRes, teamRes, timelineRes, labsRes, scoreRes, findingRes] =
+  const [vitalsRes, allergyRes, condRes, medRes, teamRes, timelineRes, labsRes, scoreRes, findingRes] =
     await Promise.all([
       supabase
         .from('vital_sign')
@@ -742,6 +743,11 @@ export async function getPatientChart(patientId: string): Promise<PatientChart> 
         .select('id, substance, severity')
         .eq('patient_id', patientId)
         .is('inactivated_at', null),
+      supabase
+        .from('patient_condition')
+        .select('id, name, clinical_status, is_primary')
+        .eq('patient_id', patientId)
+        .eq('record_status', 'active'),
       supabase
         .from('medication_order')
         .select('id, drug_name, dose_text, frequency_text, status, refill_requested_at')
@@ -824,6 +830,7 @@ export async function getPatientChart(patientId: string): Promise<PatientChart> 
     vitals:
       (unwrap<VitalRow>(vitalsRes.data, vitalsRes.error)[0] as VitalRow | undefined) ?? null,
     allergies: unwrap<AllergyRow>(allergyRes.data, allergyRes.error),
+    conditions: unwrap<{ id: string; name: string; clinical_status: string; is_primary: boolean }>(condRes.data, condRes.error),
     medications: unwrap<MedicationRow>(medRes.data, medRes.error),
     careTeam: unwrap<CareTeamRow>(teamRes.data, teamRes.error).map((r) => ({
       ...r,
