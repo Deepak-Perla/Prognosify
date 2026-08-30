@@ -1,5 +1,5 @@
 -- =============================================================================================
--- 060_portal_flows.sql — patient-portal messaging, care plan and self-service booking
+-- 060_portal_flows.sql  — patient-portal messaging, care plan and self-service booking
 --
 -- Adds the last backing stores the portals need:
 --   public.message          secure patient <-> care-team threads
